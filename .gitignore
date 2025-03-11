@@ -1,5 +1,17 @@
 # 依赖目录
 node_modules/
+node_modules/.cache/
+.cache/
+
+# 包锁定文件
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# MongoDB Memory Server 缓存
+.mongodb-data/
+**/mongodb-memory-server/
+mongodb-memory-server-*
 
 # 环境配置
 .env
