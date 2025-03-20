@@ -41,20 +41,20 @@ class TutorProfileService {
         userId: user._id,
         ...profileData,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       log.info(`教师资料卡创建成功: ${userId}`);
       return profile;
     } catch (error) {
       log.error(`创建教师资料卡时发生错误: ${error.message}`, error);
-      
+
       // 处理验证错误
       if (error.name === 'ValidationError') {
-        const messages = Object.values(error.errors).map(err => err.message);
+        const messages = Object.values(error.errors).map((err) => err.message);
         throw new AppError(`验证错误: ${messages.join(', ')}`, 400);
       }
-      
+
       throw error;
     }
   }
@@ -95,13 +95,13 @@ class TutorProfileService {
     try {
       const profile = await TutorProfile.findOneAndUpdate(
         { tutorId },
-        { 
-          ...updateData, 
-          updatedAt: new Date() 
+        {
+          ...updateData,
+          updatedAt: new Date(),
         },
-        { 
-          new: true, 
-          runValidators: true 
+        {
+          new: true,
+          runValidators: true,
         }
       );
 
@@ -114,13 +114,13 @@ class TutorProfileService {
       return profile;
     } catch (error) {
       log.error(`更新教师资料卡时发生错误: ${error.message}`, error);
-      
+
       // 处理验证错误
       if (error.name === 'ValidationError') {
-        const messages = Object.values(error.errors).map(err => err.message);
+        const messages = Object.values(error.errors).map((err) => err.message);
         throw new AppError(`验证错误: ${messages.join(', ')}`, 400);
       }
-      
+
       throw error;
     }
   }
@@ -134,7 +134,7 @@ class TutorProfileService {
     log.info(`尝试删除教师资料卡: ${tutorId}`);
 
     const result = await TutorProfile.deleteOne({ tutorId });
-    
+
     if (result.deletedCount === 0) {
       log.warn(`删除资料卡失败: 教师 ${tutorId} 资料卡不存在`);
       throw new AppError('教师资料卡不存在', 404);
@@ -160,9 +160,9 @@ class TutorProfileService {
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
+      {
         availabilityStatus: status,
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -193,7 +193,7 @@ class TutorProfileService {
 
     // 检查科目是否已存在
     const existingSubject = profile.teachingExperience.subjects.find(
-      s => s.name === subject.name
+      (s) => s.name === subject.name
     );
 
     if (existingSubject) {
@@ -207,7 +207,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`科目添加成功: ${tutorId} - ${subject.name}`);
-    
+
     return profile;
   }
 
@@ -229,7 +229,7 @@ class TutorProfileService {
 
     // 查找科目
     const subjectIndex = profile.teachingExperience.subjects.findIndex(
-      s => s._id.toString() === subjectId
+      (s) => s._id.toString() === subjectId
     );
 
     if (subjectIndex === -1) {
@@ -238,7 +238,10 @@ class TutorProfileService {
     }
 
     // 如果更新科目名称，检查是否与其他科目重名
-    if (updateData.name && updateData.name !== profile.teachingExperience.subjects[subjectIndex].name) {
+    if (
+      updateData.name &&
+      updateData.name !== profile.teachingExperience.subjects[subjectIndex].name
+    ) {
       const duplicateName = profile.teachingExperience.subjects.find(
         (s, idx) => idx !== subjectIndex && s.name === updateData.name
       );
@@ -250,12 +253,15 @@ class TutorProfileService {
     }
 
     // 更新科目
-    Object.assign(profile.teachingExperience.subjects[subjectIndex], updateData);
+    Object.assign(
+      profile.teachingExperience.subjects[subjectIndex],
+      updateData
+    );
     profile.updatedAt = new Date();
 
     await profile.save();
     log.info(`科目更新成功: ${tutorId} - ${subjectId}`);
-    
+
     return profile;
   }
 
@@ -276,7 +282,7 @@ class TutorProfileService {
 
     // 查找科目
     const subjectIndex = profile.teachingExperience.subjects.findIndex(
-      s => s._id.toString() === subjectId
+      (s) => s._id.toString() === subjectId
     );
 
     if (subjectIndex === -1) {
@@ -290,7 +296,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`科目删除成功: ${tutorId} - ${subjectId}`);
-    
+
     return profile;
   }
 
@@ -323,7 +329,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`成功案例添加成功: ${tutorId} - ${subjectId}`);
-    
+
     return profile;
   }
 
@@ -364,7 +370,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`成功案例更新成功: ${tutorId} - ${subjectId} - ${caseId}`);
-    
+
     return profile;
   }
 
@@ -393,7 +399,7 @@ class TutorProfileService {
 
     // 查找成功案例
     const caseIndex = subject.successCases.findIndex(
-      c => c._id.toString() === caseId
+      (c) => c._id.toString() === caseId
     );
 
     if (caseIndex === -1) {
@@ -407,7 +413,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`成功案例删除成功: ${tutorId} - ${subjectId} - ${caseId}`);
-    
+
     return profile;
   }
 
@@ -418,7 +424,9 @@ class TutorProfileService {
    * @returns {Promise<Object>} - 更新后的资料卡
    */
   static async addTimeSession(tutorId, sessionData) {
-    log.info(`为教师 ${tutorId} 添加课程时间段: ${sessionData.day} ${sessionData.period}`);
+    log.info(
+      `为教师 ${tutorId} 添加课程时间段: ${sessionData.day} ${sessionData.period}`
+    );
 
     const profile = await TutorProfile.findOne({ tutorId });
     if (!profile) {
@@ -428,20 +436,26 @@ class TutorProfileService {
 
     // 检查时间段是否已存在
     const existingSession = profile.schedule.weekend.sessions.find(
-      s => s.day === sessionData.day && s.period === sessionData.period
+      (s) => s.day === sessionData.day && s.period === sessionData.period
     );
 
     if (existingSession) {
-      log.warn(`添加课程时间段失败: ${sessionData.day} ${sessionData.period} 时间段已存在`);
-      throw new AppError(`${sessionData.day} ${sessionData.period} 时间段已存在`, 409);
+      log.warn(
+        `添加课程时间段失败: ${sessionData.day} ${sessionData.period} 时间段已存在`
+      );
+      throw new AppError(
+        `${sessionData.day} ${sessionData.period} 时间段已存在`,
+        409
+      );
     }
 
     // 如果没有提供时间，使用默认时间
     if (!sessionData.timeSlot) {
-      const defaultTimes = profile.schedule.weekend.defaultTimes[sessionData.period];
+      const defaultTimes =
+        profile.schedule.weekend.defaultTimes[sessionData.period];
       sessionData.timeSlot = {
         startTime: defaultTimes.startTime,
-        endTime: defaultTimes.endTime
+        endTime: defaultTimes.endTime,
       };
     }
 
@@ -450,8 +464,10 @@ class TutorProfileService {
     profile.updatedAt = new Date();
 
     await profile.save();
-    log.info(`课程时间段添加成功: ${tutorId} - ${sessionData.day} ${sessionData.period}`);
-    
+    log.info(
+      `课程时间段添加成功: ${tutorId} - ${sessionData.day} ${sessionData.period}`
+    );
+
     return profile;
   }
 
@@ -473,7 +489,7 @@ class TutorProfileService {
 
     // 查找时间段
     const sessionIndex = profile.schedule.weekend.sessions.findIndex(
-      s => s._id.toString() === sessionId
+      (s) => s._id.toString() === sessionId
     );
 
     if (sessionIndex === -1) {
@@ -482,13 +498,18 @@ class TutorProfileService {
     }
 
     // 如果更新日期和时段，检查是否与其他时间段冲突
-    if ((updateData.day || updateData.period) && 
-        (updateData.day !== profile.schedule.weekend.sessions[sessionIndex].day || 
-         updateData.period !== profile.schedule.weekend.sessions[sessionIndex].period)) {
-      
-      const day = updateData.day || profile.schedule.weekend.sessions[sessionIndex].day;
-      const period = updateData.period || profile.schedule.weekend.sessions[sessionIndex].period;
-      
+    if (
+      (updateData.day || updateData.period) &&
+      (updateData.day !== profile.schedule.weekend.sessions[sessionIndex].day ||
+        updateData.period !==
+          profile.schedule.weekend.sessions[sessionIndex].period)
+    ) {
+      const day =
+        updateData.day || profile.schedule.weekend.sessions[sessionIndex].day;
+      const period =
+        updateData.period ||
+        profile.schedule.weekend.sessions[sessionIndex].period;
+
       const duplicateSession = profile.schedule.weekend.sessions.find(
         (s, idx) => idx !== sessionIndex && s.day === day && s.period === period
       );
@@ -505,7 +526,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`课程时间段更新成功: ${tutorId} - ${sessionId}`);
-    
+
     return profile;
   }
 
@@ -526,7 +547,7 @@ class TutorProfileService {
 
     // 查找时间段
     const sessionIndex = profile.schedule.weekend.sessions.findIndex(
-      s => s._id.toString() === sessionId
+      (s) => s._id.toString() === sessionId
     );
 
     if (sessionIndex === -1) {
@@ -546,7 +567,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`课程时间段删除成功: ${tutorId} - ${sessionId}`);
-    
+
     return profile;
   }
 
@@ -568,10 +589,16 @@ class TutorProfileService {
     // 验证时间格式
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     for (const period in defaultTimes) {
-      if (defaultTimes[period].startTime && !timeRegex.test(defaultTimes[period].startTime)) {
+      if (
+        defaultTimes[period].startTime &&
+        !timeRegex.test(defaultTimes[period].startTime)
+      ) {
         throw new AppError(`${period}开始时间格式无效，应为 HH:MM`, 400);
       }
-      if (defaultTimes[period].endTime && !timeRegex.test(defaultTimes[period].endTime)) {
+      if (
+        defaultTimes[period].endTime &&
+        !timeRegex.test(defaultTimes[period].endTime)
+      ) {
         throw new AppError(`${period}结束时间格式无效，应为 HH:MM`, 400);
       }
     }
@@ -582,7 +609,7 @@ class TutorProfileService {
 
     await profile.save();
     log.info(`默认时间设置更新成功: ${tutorId}`);
-    
+
     return profile;
   }
 
@@ -597,9 +624,9 @@ class TutorProfileService {
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
+      {
         location: locationData,
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -623,15 +650,18 @@ class TutorProfileService {
     log.info(`更新教师 ${tutorId} 的价格设置`);
 
     // 验证价格
-    if (pricingData.basePrice && (isNaN(pricingData.basePrice) || pricingData.basePrice < 0)) {
+    if (
+      pricingData.basePrice &&
+      (isNaN(pricingData.basePrice) || pricingData.basePrice < 0)
+    ) {
       throw new AppError('基础价格必须是非负数', 400);
     }
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
+      {
         pricing: pricingData,
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -656,9 +686,9 @@ class TutorProfileService {
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
+      {
         teachingStyle: styleData,
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -683,16 +713,20 @@ class TutorProfileService {
 
     // 验证评分
     for (const key in ratingsData) {
-      if (isNaN(ratingsData[key]) || ratingsData[key] < 0 || ratingsData[key] > 5) {
+      if (
+        isNaN(ratingsData[key]) ||
+        ratingsData[key] < 0 ||
+        ratingsData[key] > 5
+      ) {
         throw new AppError(`${key}评分必须在0-5之间`, 400);
       }
     }
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
-        'ratings': ratingsData,
-        updatedAt: new Date() 
+      {
+        ratings: ratingsData,
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -718,7 +752,11 @@ class TutorProfileService {
     // 验证统计数据
     for (const key in statisticsData) {
       if (key === 'completionRate' || key === 'repeatRate') {
-        if (isNaN(statisticsData[key]) || statisticsData[key] < 0 || statisticsData[key] > 100) {
+        if (
+          isNaN(statisticsData[key]) ||
+          statisticsData[key] < 0 ||
+          statisticsData[key] > 100
+        ) {
           throw new AppError(`${key}必须在0-100之间`, 400);
         }
       } else if (isNaN(statisticsData[key]) || statisticsData[key] < 0) {
@@ -728,9 +766,9 @@ class TutorProfileService {
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
-        'statistics': statisticsData,
-        updatedAt: new Date() 
+      {
+        statistics: statisticsData,
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -755,9 +793,9 @@ class TutorProfileService {
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
+      {
         $inc: { 'statistics.totalStudents': count },
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -767,7 +805,9 @@ class TutorProfileService {
       throw new AppError('教师资料卡不存在', 404);
     }
 
-    log.info(`学生数量更新成功: ${tutorId} -> ${profile.statistics.totalStudents}`);
+    log.info(
+      `学生数量更新成功: ${tutorId} -> ${profile.statistics.totalStudents}`
+    );
     return profile;
   }
 
@@ -782,9 +822,9 @@ class TutorProfileService {
 
     const profile = await TutorProfile.findOneAndUpdate(
       { tutorId },
-      { 
+      {
         $inc: { 'statistics.totalClasses': count },
-        updatedAt: new Date() 
+        updatedAt: new Date(),
       },
       { new: true }
     );
@@ -794,7 +834,9 @@ class TutorProfileService {
       throw new AppError('教师资料卡不存在', 404);
     }
 
-    log.info(`课时数量更新成功: ${tutorId} -> ${profile.statistics.totalClasses}`);
+    log.info(
+      `课时数量更新成功: ${tutorId} -> ${profile.statistics.totalClasses}`
+    );
     return profile;
   }
 
@@ -807,12 +849,12 @@ class TutorProfileService {
   static async queryTutors(filters = {}, options = {}) {
     log.info(`查询教师列表: ${JSON.stringify(filters)}`);
 
-    const { 
-      page = 1, 
-      limit = 10, 
-      sortBy = 'ratings.overall', 
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'ratings.overall',
       sortOrder = -1,
-      fields
+      fields,
     } = options;
 
     // 构建查询条件
@@ -830,7 +872,9 @@ class TutorProfileService {
 
     // 处理教龄过滤
     if (filters.minExperience) {
-      query['teachingExperience.years'] = { $gte: parseInt(filters.minExperience) };
+      query['teachingExperience.years'] = {
+        $gte: parseInt(filters.minExperience),
+      };
     }
 
     // 处理评分过滤
@@ -857,17 +901,21 @@ class TutorProfileService {
     }
 
     // 处理地理位置过滤
-    if (filters.nearLocation && filters.nearLocation.latitude && filters.nearLocation.longitude) {
+    if (
+      filters.nearLocation &&
+      filters.nearLocation.latitude &&
+      filters.nearLocation.longitude
+    ) {
       const { latitude, longitude, maxDistance = 10000 } = filters.nearLocation; // 默认10公里
-      
+
       query['location.coordinates'] = {
         $near: {
           $geometry: {
             type: 'Point',
-            coordinates: [parseFloat(longitude), parseFloat(latitude)]
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          $maxDistance: parseInt(maxDistance)
-        }
+          $maxDistance: parseInt(maxDistance),
+        },
       };
     }
 
@@ -879,25 +927,32 @@ class TutorProfileService {
         { lastName: { $regex: keyword, $options: 'i' } },
         { 'education.school': { $regex: keyword, $options: 'i' } },
         { 'education.major': { $regex: keyword, $options: 'i' } },
-        { 'teachingExperience.subjects.name': { $regex: keyword, $options: 'i' } },
+        {
+          'teachingExperience.subjects.name': {
+            $regex: keyword,
+            $options: 'i',
+          },
+        },
         { 'teachingStyle.description': { $regex: keyword, $options: 'i' } },
         { 'teachingStyle.keywords': { $regex: keyword, $options: 'i' } },
-        { 'teachingStyle.strengths': { $regex: keyword, $options: 'i' } }
+        { 'teachingStyle.strengths': { $regex: keyword, $options: 'i' } },
       ];
     }
 
     // 计算分页
     const skip = (page - 1) * limit;
-    
+
     // 构建排序
     const sort = {};
     sort[sortBy] = sortOrder;
 
     // 构建字段选择
-    const projection = fields ? fields.split(',').reduce((obj, field) => {
-      obj[field.trim()] = 1;
-      return obj;
-    }, {}) : {};
+    const projection = fields
+      ? fields.split(',').reduce((obj, field) => {
+          obj[field.trim()] = 1;
+          return obj;
+        }, {})
+      : {};
 
     try {
       // 执行查询
@@ -912,15 +967,15 @@ class TutorProfileService {
       const total = await TutorProfile.countDocuments(query);
 
       log.info(`查询教师列表成功: 找到 ${total} 条记录`);
-      
+
       return {
         tutors,
         pagination: {
           total,
           page: parseInt(page),
           limit: parseInt(limit),
-          pages: Math.ceil(total / limit)
-        }
+          pages: Math.ceil(total / limit),
+        },
       };
     } catch (error) {
       log.error(`查询教师列表时发生错误: ${error.message}`, error);
@@ -948,12 +1003,12 @@ class TutorProfileService {
    */
   static async findTutorsByLocation(city, district = null, options = {}) {
     log.info(`根据地区查询教师: ${city} ${district || ''}`);
-    
+
     const filters = { city };
     if (district) {
       filters.district = district;
     }
-    
+
     return this.queryTutors(filters, options);
   }
 
@@ -965,17 +1020,24 @@ class TutorProfileService {
    * @param {Object} options - 分页和排序选项
    * @returns {Promise<Object>} - 教师列表和分页信息
    */
-  static async findNearbyTutors(latitude, longitude, maxDistance = 5000, options = {}) {
-    log.info(`查询附近教师: 位置(${latitude}, ${longitude}), 距离${maxDistance}米`);
-    
+  static async findNearbyTutors(
+    latitude,
+    longitude,
+    maxDistance = 5000,
+    options = {}
+  ) {
+    log.info(
+      `查询附近教师: 位置(${latitude}, ${longitude}), 距离${maxDistance}米`
+    );
+
     const filters = {
       nearLocation: {
         latitude,
         longitude,
-        maxDistance
-      }
+        maxDistance,
+      },
     };
-    
+
     return this.queryTutors(filters, options);
   }
 
@@ -987,18 +1049,18 @@ class TutorProfileService {
    */
   static async getRecommendedTutors(studentPreferences, options = {}) {
     log.info(`获取推荐教师: ${JSON.stringify(studentPreferences)}`);
-    
+
     const filters = {};
-    
+
     // 根据学生偏好构建过滤条件
     if (studentPreferences.subject) {
       filters.subject = studentPreferences.subject;
     }
-    
+
     if (studentPreferences.grade) {
       filters.grade = studentPreferences.grade;
     }
-    
+
     if (studentPreferences.location) {
       if (studentPreferences.location.city) {
         filters.city = studentPreferences.location.city;
@@ -1007,16 +1069,183 @@ class TutorProfileService {
         filters.district = studentPreferences.location.district;
       }
     }
-    
+
     if (studentPreferences.maxPrice) {
       filters.maxPrice = studentPreferences.maxPrice;
     }
-    
+
     // 默认按评分排序
     options.sortBy = options.sortBy || 'ratings.overall';
     options.sortOrder = options.sortOrder || -1;
-    
+
     return this.queryTutors(filters, options);
+  }
+  
+  /**
+   * 获取教师所在城市的家教需求帖子
+   * @param {String} tutorId - 教师ID
+   * @param {Object} options - 分页和排序选项
+   * @returns {Promise<Object>} - 帖子列表和分页信息
+   */
+  static async getCityTutoringRequests(tutorId, options = {}) {
+    try {
+      log.info(`获取教师 ${tutorId} 所在城市的家教需求帖子`);
+      
+      // 获取教师资料卡
+      const tutorProfile = await TutorProfile.findOne({ tutorId });
+      if (!tutorProfile) {
+        throw new AppError('教师资料卡不存在', 404);
+      }
+      
+      // 获取教师所在城市
+      const city = tutorProfile.location.city;
+      if (!city) {
+        throw new AppError('教师没有设置城市信息', 400);
+      }
+      
+      // 设置分页参数
+      const { 
+        page = 1, 
+        limit = 10, 
+        sortBy = 'createdAt', 
+        sortOrder = -1 
+      } = options;
+      
+      const skip = (page - 1) * limit;
+      const sort = {};
+      sort[sortBy] = sortOrder;
+      
+      // 查询当前城市的开放状态的帖子
+      const requests = await TutoringRequest.find({
+        'location.city': city,
+        'status': 'open',
+        'status': 'published'
+      })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort(sort);
+      
+      // 统计总数
+      const total = await TutoringRequest.countDocuments({
+        'location.city': city,
+        'status': 'open',
+        'status': 'published'
+      });
+      
+      log.info(`成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`);
+      
+      return {
+        requests,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      log.error(`获取教师所在城市的家教需求帖子失败: ${error.message}`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * 根据多个条件获取教师所在城市的家教需求帖子
+   * @param {String} tutorId - 教师ID
+   * @param {Object} filters - 筛选条件
+   * @param {Object} options - 分页和排序选项
+   * @returns {Promise<Object>} - 帖子列表和分页信息
+   */
+  static async getCityTutoringRequestsWithFilters(tutorId, filters = {}, options = {}) {
+    try {
+      log.info(`获取教师 ${tutorId} 所在城市的家教需求帖子，带筛选条件: ${JSON.stringify(filters)}`);
+      
+      // 获取教师资料卡
+      const tutorProfile = await TutorProfile.findOne({ tutorId });
+      if (!tutorProfile) {
+        throw new AppError('教师资料卡不存在', 404);
+      }
+      
+      // 获取教师所在城市
+      const city = tutorProfile.location.city;
+      if (!city) {
+        throw new AppError('教师没有设置城市信息', 400);
+      }
+      
+      // 构建查询条件
+      const query = {
+        'location.city': city,
+        'status': 'open',
+        'status': 'published'
+      };
+      
+      // 添加科目筛选
+      if (filters.subject) {
+        query['subjects.name'] = filters.subject;
+      }
+      
+      // 添加年级筛选
+      if (filters.grade) {
+        query['grade'] = filters.grade;
+      }
+      
+      // 添加教育水平筛选
+      if (filters.educationLevel) {
+        query['preferences.educationLevel'] = filters.educationLevel;
+      }
+      
+      // 添加价格区间筛选
+      if (filters.minPrice !== undefined && filters.maxPrice !== undefined) {
+        query['preferences.priceRange.min'] = { $lte: filters.maxPrice };
+        query['preferences.priceRange.max'] = { $gte: filters.minPrice };
+      }
+      
+      // 添加开课时间筛选
+      if (filters.session) {
+        if (filters.session.day) {
+          query['preferences.schedule.days'] = filters.session.day;
+        }
+        if (filters.session.period) {
+          query['preferences.schedule.periods'] = filters.session.period;
+        }
+      }
+      
+      // 设置分页参数
+      const { 
+        page = 1, 
+        limit = 10, 
+        sortBy = 'createdAt', 
+        sortOrder = -1 
+      } = options;
+      
+      const skip = (page - 1) * limit;
+      const sort = {};
+      sort[sortBy] = sortOrder;
+      
+      // 执行查询
+      const requests = await TutoringRequest.find(query)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .sort(sort);
+      
+      // 统计总数
+      const total = await TutoringRequest.countDocuments(query);
+      
+      log.info(`成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`);
+      
+      return {
+        requests,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      log.error(`根据条件获取教师所在城市的家教需求帖子失败: ${error.message}`, error);
+      throw error;
+    }
   }
 }
 

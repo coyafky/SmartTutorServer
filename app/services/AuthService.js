@@ -97,9 +97,11 @@ class AuthService {
         throw new AppError(`您的账号已${user.status === 'banned' ? '被禁用' : '未激活'}`, 403);
       }
 
-      // 更新最后登录时间
-      user.lastLoginAt = new Date();
-      await user.save();
+      // 更新最后登录时间 - 使用updateOne避免触发完整的文档验证
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { lastLoginAt: new Date() } }
+      );
 
       log.info(`用户 ${username} 登录成功`);
 
