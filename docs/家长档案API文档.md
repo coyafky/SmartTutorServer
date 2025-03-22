@@ -527,6 +527,460 @@
   }
   ```
 
+## 教师筛选接口
+
+### 1. 获取同城市的教师列表
+
+- **URL**: `/parent-profiles/:parentId/tutors/city`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 获取与家长在同一城市的教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**: 无
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "location": {
+            "province": "广东省",
+            "city": "深圳市",
+            "district": "南山区"
+          },
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8,
+          "hourlyRate": 200,
+          "availableSessions": ["周一晚上", "周三下午", "周六全天"]
+        },
+        // 更多教师数据...
+      ],
+      "count": 15
+    }
+  }
+  ```
+- **错误响应** (404):
+  ```json
+  {
+    "status": "error",
+    "message": "未找到家长档案或无法获取教师列表"
+  }
+  ```
+
+### 2. 按科目筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/subject`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按科目筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  subject=数学 // 查询参数，指定要筛选的科目
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8,
+          "hourlyRate": 200,
+          "availableSessions": ["周一晚上", "周三下午", "周六全天"]
+        },
+        // 更多教师数据...
+      ],
+      "count": 25
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "缺少必要的科目参数"
+  }
+  ```
+
+### 3. 按地理位置筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/location`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按地理位置筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  province=广东省&city=深圳市&district=南山区 // 可选参数，不提供则默认使用家长档案中的位置信息
+  distance=5 // 可选参数，搜索半径（公里）
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "location": {
+            "province": "广东省",
+            "city": "深圳市",
+            "district": "南山区",
+            "address": "科技园路2号"
+          },
+          "distance": 1.2, // 距离（公里）
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8
+        },
+        // 更多教师数据...
+      ],
+      "count": 8
+    }
+  }
+  ```
+- **错误响应** (404):
+  ```json
+  {
+    "status": "error",
+    "message": "未找到家长档案或位置信息不完整"
+  }
+  ```
+
+### 4. 按价格区间筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/price`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按价格区间筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  minPrice=100&maxPrice=300 // 价格区间（元/小时）
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8,
+          "hourlyRate": 200
+        },
+        // 更多教师数据...
+      ],
+      "count": 18
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "价格区间参数无效"
+  }
+  ```
+
+### 5. 按学历筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/education`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按学历筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  education=硕士 // 学历要求，可选值：本科、硕士、博士等
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "graduatedFrom": "北京大学",
+          "rating": 4.8,
+          "hourlyRate": 200
+        },
+        // 更多教师数据...
+      ],
+      "count": 12
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "学历参数无效"
+  }
+  ```
+
+### 6. 按开课时间筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/session`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按开课时间筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  day=周六&timeSlot=上午 // 可选值：周一至周日，上午、下午、晚上、全天
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8,
+          "hourlyRate": 200,
+          "availableSessions": ["周六上午", "周六下午", "周日全天"]
+        },
+        // 更多教师数据...
+      ],
+      "count": 10
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "时间参数无效"
+  }
+  ```
+
+### 7. 多条件筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/filter`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 根据多个条件筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  subject=数学&minPrice=150&maxPrice=300&education=硕士&minRating=4.5&city=深圳市&district=南山区&day=周六
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "location": {
+            "province": "广东省",
+            "city": "深圳市",
+            "district": "南山区"
+          },
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8,
+          "hourlyRate": 200,
+          "availableSessions": ["周六上午", "周六下午"]
+        },
+        // 更多教师数据...
+      ],
+      "count": 5
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "筛选参数无效"
+  }
+  ```
+
+### 8. 按科目和价格区间筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/subject-price`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按科目和价格区间筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  subject=数学&minPrice=150&maxPrice=300
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8,
+          "hourlyRate": 200
+        },
+        // 更多教师数据...
+      ],
+      "count": 15
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "缺少必要参数或参数无效"
+  }
+  ```
+
+### 9. 按科目、学历和评分筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/subject-education-rating`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按科目、学历和评分筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  subject=数学&education=硕士&minRating=4.5
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "graduatedFrom": "北京大学",
+          "rating": 4.8,
+          "hourlyRate": 200
+        },
+        // 更多教师数据...
+      ],
+      "count": 8
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "缺少必要参数或参数无效"
+  }
+  ```
+
+### 10. 按开课时间、科目和教学经验筛选教师
+
+- **URL**: `/parent-profiles/:parentId/tutors/session-subject-experience`
+- **方法**: `GET`
+- **认证**: 需要 (家长角色)
+- **描述**: 按开课时间、科目和教学经验筛选教师列表
+- **请求头**:
+  ```
+  Authorization: Bearer <token>
+  ```
+- **请求参数**:
+  ```
+  day=周六&timeSlot=下午&subject=数学&minExperience=3
+  ```
+- **成功响应** (200):
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "tutors": [
+        {
+          "tutorId": "TUTOR_20250316123456",
+          "name": "王老师",
+          "avatar": "https://example.com/avatar.jpg",
+          "subjects": ["数学", "物理"],
+          "education": "硕士",
+          "rating": 4.8,
+          "hourlyRate": 200,
+          "experience": 5, // 教学经验（年）
+          "availableSessions": ["周六下午", "周日全天"]
+        },
+        // 更多教师数据...
+      ],
+      "count": 6
+    }
+  }
+  ```
+- **错误响应** (400):
+  ```json
+  {
+    "status": "error",
+    "message": "缺少必要参数或参数无效"
+  }
+  ```
+
 ## Postman 测试指南
 
 1. **环境设置**:

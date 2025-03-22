@@ -4,9 +4,7 @@
  * @module services/RecommendationService
  */
 
-const TutorProfile = require('../../models/TutorProfile');
-const Parent = require('../../models/Parent');
-const TutoringRequest = require('../../models/TutoringRequest');
+const RecommendationRepository = require('../repositories/RecommendationRepository');
 const mongoose = require('mongoose');
 
 /**
@@ -161,7 +159,7 @@ class RecommendationService {
     
     try {
       // 获取教师信息
-      const tutor = await TutorProfile.findOne({ customId: tutorId });
+      const tutor = await RecommendationRepository.findTutorById(tutorId);
       if (!tutor) {
         throw new Error('教师不存在');
       }
@@ -175,16 +173,10 @@ class RecommendationService {
       
       // 第一步：基于地理位置筛选
       // 1. 同城市的需求
-      const sameCityRequests = await TutoringRequest.find({
-        ...baseQuery,
-        'location.city': tutorCity
-      }).populate('parentId').limit(50);
+      const sameCityRequests = await RecommendationRepository.getRequestsBySameCity(tutorCity, 50);
       
       // 2. 不同城市但距离在范围内的需求
-      const geoNearRequests = await TutoringRequest.find({
-        ...baseQuery,
-        'location.city': { $ne: tutorCity }
-      }).populate('parentId').limit(50);
+      const geoNearRequests = await RecommendationRepository.getRequestsByDifferentCity(tutorCity, 50);
       
       // 过滤掉距离过远的需求
       const filteredGeoRequests = geoNearRequests.filter(request => {
@@ -211,14 +203,12 @@ class RecommendationService {
       
       // 第三步：基于协同过滤调整分数
       // 获取教师的历史匹配记录
-      const tutorMatches = await mongoose.model('Match').find({ tutorId });
+      const tutorMatches = await RecommendationRepository.getTutorMatchHistory(tutorId);
       
       // 如果教师有历史匹配，使用协同过滤进行调整
       if (tutorMatches.length > 0) {
         // 获取所有教师的匹配记录，用于协同过滤
-        const allTutorMatches = await mongoose.model('Match').find({
-          tutorId: { $ne: tutorId }
-        });
+        const allTutorMatches = await RecommendationRepository.getAllTutorRatings();
         
         // 构建评分矩阵
         const tutorRatings = tutorMatches.map(match => ({
@@ -303,7 +293,7 @@ class RecommendationService {
     
     try {
       // 获取家长信息
-      const parent = await Parent.findOne({ customId: parentId });
+      const parent = await RecommendationRepository.findParentById(parentId);
       if (!parent) {
         throw new Error('家长不存在');
       }
@@ -321,16 +311,10 @@ class RecommendationService {
       
       // 第一步：基于地理位置筛选
       // 1. 同城市的教师
-      const sameCityTutors = await TutorProfile.find({
-        ...baseQuery,
-        'location.city': parentCity
-      }).limit(50);
+      const sameCityTutors = await RecommendationRepository.getTutorsBySameCity(parentCity, 50);
       
       // 2. 不同城市但距离在范围内的教师
-      const geoNearTutors = await TutorProfile.find({
-        ...baseQuery,
-        'location.city': { $ne: parentCity }
-      }).limit(50);
+      const geoNearTutors = await RecommendationRepository.getTutorsByDifferentCity(parentCity, 50);
       
       // 过滤掉距离过远的教师
       const filteredGeoTutors = geoNearTutors.filter(tutor => {
@@ -488,6 +472,42 @@ class RecommendationService {
     } catch (error) {
       console.error('推荐教师失败:', error);
       throw error;
+    }
+  }
+  /**
+   * 收集用户反馈数据
+   * 用于协同过滤推荐系统的改进
+   * @param {String} matchId - 匹配ID
+   * @param {Object} feedback - 反馈数据
+   * @returns {Promise<Object>} 处理结果
+   */
+  async collectFeedback(matchId, feedback) {
+    try {
+      // 获取匹配记录
+      const match = await RecommendationRepository.findMatchById(matchId);
+      if (!match) {
+        throw new Error('匹配记录不存在');
+      }
+      
+      // 更新匹配记录中的评分和评价
+      const updateData = {};
+      
+      if (feedback.role === 'parent') {
+        updateData.parentRating = feedback.rating;
+        updateData.parentReview = feedback.review;
+      } else if (feedback.role === 'tutor') {
+        updateData.tutorRating = feedback.rating;
+        updateData.tutorReview = feedback.review;
+      }
+      
+      // 更新匹配记录
+      await RecommendationRepository.updateMatch(match._id, updateData);
+      
+      return { success: true, message: '反馈已收集' };
+      
+    } catch (error) {
+      console.error('收集反馈失败:', error);
+      return { success: false, message: error.message };
     }
   }
 }

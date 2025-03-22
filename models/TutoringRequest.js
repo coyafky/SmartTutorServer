@@ -91,21 +91,17 @@ const LocationSchema = new mongoose.Schema({
      */
     coordinates: {
         /**
-         * 纬度
-         * 地理位置的纬度坐标
-         * @type {Number}
+         * GeoJSON 格式的坐标数组 [longitude, latitude]
+         * @type {Array}
          */
-        latitude: {
-            type: Number,
-            required: true  // 必填字段
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point',
+            required: true
         },
-        /**
-         * 经度
-         * 地理位置的经度坐标
-         * @type {Number}
-         */
-        longitude: {
-            type: Number,
+        coordinates: {
+            type: [Number],  // [longitude, latitude] 格式
             required: true  // 必填字段
         }
     }
@@ -189,6 +185,17 @@ const PreferencesSchema = new mongoose.Schema({
  */
 const TutoringRequestSchema = new mongoose.Schema({
     /**
+     * 请求ID
+     * 唯一标识家教需求请求的ID，格式为 REQUEST_ParentId_时间戳-序列号
+     * @type {String}
+     */
+    requestId: {
+        type: String,
+        unique: true,
+        required: true
+    },
+    
+    /**
      * 帖子状态
      * 标识帖子的当前状态（已发布、待审核、已拒绝）
      * @type {String}
@@ -257,17 +264,17 @@ const TutoringRequestSchema = new mongoose.Schema({
      * @type {mongoose.Schema.Types.ObjectId}
      */
     parentId: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         ref: 'Parent',  // 引用Parent模型
         required: true  // 必填字段
     },
     /**
      * 孩子ID
      * 需要辅导的孩子ID，关联到Parent模型中的children数组
-     * @type {mongoose.Schema.Types.ObjectId}
+     * @type {String}
      */
     childId: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         required: true,  // 必填字段
         description: '关联的子女ID'
     },
@@ -331,7 +338,7 @@ const TutoringRequestSchema = new mongoose.Schema({
  * 添加地理位置索引
  * 支持基于地理位置的查询，如查找附近的家教需求
  */
-TutoringRequestSchema.index({ 'location.coordinates': '2dsphere' });
+TutoringRequestSchema.index({ 'location.coordinates.coordinates': '2dsphere' });
 
 /**
  * 添加查询方法

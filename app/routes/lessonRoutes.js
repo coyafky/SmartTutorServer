@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { check } = require('express-validator');
 const LessonController = require('../controllers/LessonController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken } = require('../middlewares/auth');
 
 // 所有课程路由都需要身份验证
 router.use(authenticateToken);

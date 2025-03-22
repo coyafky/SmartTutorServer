@@ -3,8 +3,8 @@
  * 处理与课程相关的业务逻辑
  */
 
-const Lesson = require('../../models/Lesson');
 const User = require('../../models/User');
+const LessonRepository = require('../repositories/LessonRepository');
 const MessageService = require('./MessageService');
 const NotificationService = require('./NotificationService');
 const mongoose = require('mongoose');
@@ -35,8 +35,7 @@ class LessonService {
       }
       
       // 创建课程
-      const lesson = new Lesson(lessonData);
-      await lesson.save();
+      const lesson = await LessonRepository.create(lessonData);
       
       // 如果提供了会话ID，发送课程请求消息
       if (conversationId) {
@@ -80,10 +79,7 @@ class LessonService {
    */
   static async getLessonById(lessonId) {
     try {
-      const lesson = await Lesson.findById(lessonId)
-        .populate('tutorId', 'username avatar role email')
-        .populate('parentId', 'username avatar role email')
-        .exec();
+      const lesson = await LessonRepository.findById(lessonId);
       
       if (!lesson) {
         throw new Error('课程不存在');
@@ -104,7 +100,7 @@ class LessonService {
    */
   static async updateLesson(lessonId, updateData, conversationId = null) {
     try {
-      const lesson = await Lesson.findById(lessonId);
+      const lesson = await LessonRepository.findById(lessonId);
       
       if (!lesson) {
         throw new Error('课程不存在');
@@ -172,7 +168,7 @@ class LessonService {
    */
   static async updateLessonStatus(lessonId, status, conversationId = null, userId = null) {
     try {
-      const lesson = await Lesson.findById(lessonId);
+      const lesson = await LessonRepository.findById(lessonId);
       
       if (!lesson) {
         throw new Error('课程不存在');
@@ -235,8 +231,7 @@ class LessonService {
    */
   static async deleteLesson(lessonId) {
     try {
-      const result = await Lesson.findByIdAndDelete(lessonId);
-      return !!result;
+      return await LessonRepository.delete(lessonId);
     } catch (error) {
       throw error;
     }
@@ -253,7 +248,7 @@ class LessonService {
    */
   static async getUserLessons(userId, role, status = null, startDate = null, endDate = null) {
     try {
-      return await Lesson.getUserLessons(userId, role, status, startDate, endDate);
+      return await LessonRepository.getUserLessons(userId, role, status, startDate, endDate);
     } catch (error) {
       throw error;
     }
@@ -269,7 +264,7 @@ class LessonService {
    */
   static async getLessonCalendar(userId, role, startDate, endDate) {
     try {
-      return await Lesson.getLessonsByDateRange(userId, role, startDate, endDate);
+      return await LessonRepository.getLessonsByDateRange(userId, role, startDate, endDate);
     } catch (error) {
       throw error;
     }
@@ -283,7 +278,7 @@ class LessonService {
    */
   static async addLessonMaterial(lessonId, material) {
     try {
-      return await Lesson.addMaterial(lessonId, material);
+      return await LessonRepository.addMaterial(lessonId, material);
     } catch (error) {
       throw error;
     }
@@ -344,7 +339,7 @@ class LessonService {
   static async processLessonReminders() {
     try {
       // 获取即将到来的课程（24小时内）
-      const upcomingLessons = await Lesson.getUpcomingLessons(24);
+      const upcomingLessons = await LessonRepository.getUpcomingLessons(24);
       let reminderCount = 0;
       
       // 处理每个课程的提醒

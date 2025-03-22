@@ -5,11 +5,7 @@
  */
 
 const mongoose = require('mongoose');
-const TutorProfile = require('../../models/TutorProfile');
-const Parent = require('../../models/Parent');
-const TutoringRequest = require('../../models/TutoringRequest');
-const Match = require('../../models/Match');
-const Lesson = require('../../models/Lesson');
+const RecommendationRepository = require('../repositories/RecommendationRepository');
 const fs = require('fs');
 const path = require('path');
 const { Matrix } = require('ml-matrix');
@@ -331,10 +327,11 @@ class MLRecommendationService {
       console.log('开始训练推荐模型...');
       
       // 获取所有匹配数据
-      const matches = await Match.find({})
-        .populate('tutorId')
-        .populate('parentId')
-        .lean();
+      const tutorMatches = await RecommendationRepository.getAllTutorRatings();
+      const parentMatches = await RecommendationRepository.getAllParentRatings();
+      
+      // 合并所有匹配数据
+      const matches = [...tutorMatches, ...parentMatches];
       
       console.log(`获取到 ${matches.length} 条匹配数据`);
       
@@ -402,7 +399,7 @@ class MLRecommendationService {
   async trainClusterModels() {
     try {
       // 获取所有教师数据
-      const tutors = await TutorProfile.find({}).lean();
+      const tutors = await RecommendationRepository.getAllTutorsForTraining();
       
       if (tutors.length > 10) {
         // 提取教师特征
@@ -419,7 +416,7 @@ class MLRecommendationService {
       }
       
       // 获取所有家长数据
-      const parents = await Parent.find({}).lean();
+      const parents = await RecommendationRepository.getAllParentsForTraining();
       
       if (parents.length > 10) {
         // 提取家长特征
@@ -454,7 +451,7 @@ class MLRecommendationService {
     
     try {
       // 获取家长信息
-      const parent = await Parent.findOne({ customId: parentId }).lean();
+      const parent = await RecommendationRepository.findParentById(parentId);
       if (!parent) {
         throw new Error('家长不存在');
       }
@@ -468,16 +465,10 @@ class MLRecommendationService {
       
       // 第一步：基于地理位置和基本条件筛选候选教师
       // 1. 同城市的教师
-      const sameCityTutors = await TutorProfile.find({
-        ...baseQuery,
-        'location.city': parentCity
-      }).limit(50).lean();
+      const sameCityTutors = await RecommendationRepository.getTutorsBySameCity(parentCity, 50);
       
       // 2. 不同城市但距离在范围内的教师
-      const geoNearTutors = await TutorProfile.find({
-        ...baseQuery,
-        'location.city': { $ne: parentCity }
-      }).limit(50).lean();
+      const geoNearTutors = await RecommendationRepository.getTutorsByDifferentCity(parentCity, 50);
       
       // 过滤掉距离过远的教师
       const filteredGeoTutors = geoNearTutors.filter(tutor => {
@@ -610,7 +601,7 @@ class MLRecommendationService {
     
     try {
       // 获取教师信息
-      const tutor = await TutorProfile.findOne({ customId: tutorId }).lean();
+      const tutor = await RecommendationRepository.findTutorById(tutorId);
       if (!tutor) {
         throw new Error('教师不存在');
       }
@@ -624,16 +615,10 @@ class MLRecommendationService {
       
       // 第一步：基于地理位置筛选
       // 1. 同城市的需求
-      const sameCityRequests = await TutoringRequest.find({
-        ...baseQuery,
-        'location.city': tutorCity
-      }).populate('parentId').limit(50).lean();
+      const sameCityRequests = await RecommendationRepository.getRequestsBySameCity(tutorCity, 50);
       
       // 2. 不同城市但距离在范围内的需求
-      const geoNearRequests = await TutoringRequest.find({
-        ...baseQuery,
-        'location.city': { $ne: tutorCity }
-      }).populate('parentId').limit(50).lean();
+      const geoNearRequests = await RecommendationRepository.getRequestsByDifferentCity(tutorCity, 50);
       
       // 过滤掉距离过远的需求
       const filteredGeoRequests = geoNearRequests.filter(request => {
@@ -850,7 +835,7 @@ class MLRecommendationService {
   async collectFeedback(matchId, feedback) {
     try {
       // 获取匹配记录
-      const match = await mongoose.model('Match').findOne({ matchId });
+      const match = await RecommendationRepository.findMatchById(matchId);
       if (!match) {
         throw new Error('匹配记录不存在');
       }
@@ -867,18 +852,10 @@ class MLRecommendationService {
       }
       
       // 更新匹配记录
-      await mongoose.model('Match').findByIdAndUpdate(
-        match._id,
-        { $set: updateData }
-      );
+      await RecommendationRepository.updateMatch(match._id, updateData);
       
       // 检查是否需要重新训练模型
-      const matchCount = await mongoose.model('Match').countDocuments({
-        $or: [
-          { parentRating: { $exists: true } },
-          { tutorRating: { $exists: true } }
-        ]
-      });
+      const matchCount = await RecommendationRepository.countRatedMatches();
       
       // 当有足够的新反馈数据时，重新训练模型
       if (matchCount % 10 === 0 && matchCount >= 20) {
