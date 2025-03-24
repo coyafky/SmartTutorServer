@@ -66,14 +66,20 @@ router.delete('/:messageId', MessageController.deleteMessage);
  * @desc 归档对话
  * @access 私有
  */
-router.patch('/conversations/:conversationId/archive', MessageController.archiveConversation);
+router.patch(
+  '/conversations/:conversationId/archive',
+  MessageController.archiveConversation
+);
 
 /**
  * @route PATCH /api/messages/conversations/:conversationId/restore
  * @desc 恢复已归档的对话
  * @access 私有
  */
-router.patch('/conversations/:conversationId/restore', MessageController.restoreConversation);
+router.patch(
+  '/conversations/:conversationId/restore',
+  MessageController.restoreConversation
+);
 
 /**
  * @route POST /api/messages/lesson-request

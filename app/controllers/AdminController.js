@@ -2,35 +2,70 @@ const User = require('../../models/User');
 const TutorProfile = require('../../models/TutorProfile');
 const TutoringRequest = require('../../models/TutoringRequest');
 const { AppError } = require('../utils/errorHandler');
-const { getAllUsers, getUserById, updateUser, } = require('../services/AdminService');
-
+const {
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  updateUserStatus,
+  updateUserRole,
+  getAllTutors,
+  getTutorById,
+  verifyTutor,
+  updateTutorStatus,
+  getAllPosts,
+  getPostById,
+  updatePostStatus,
+  deletePost,
+  getReportedPosts,
+  reviewPost,
+  getSystemSettings,
+  updateSystemSettings,
+  getUserStatistics,
+  getTutorStatistics,
+  getPostStatistics,
+  getMatchStatistics,
+} = require('../services/AdminService');
+const AdminService = require('../services/AdminService');
 // 用户管理
 exports.getAllUsers = async (req, res, next) => {
   try {
-    const users = await getAllUsers();
+    // 添加分页参数处理
+    const options = {
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 10,
+    };
+
+    // 调用服务层方法时传递必要参数
+    const result = await AdminService.getAllUsers(options);
 
     res.status(200).json({
       status: 'success',
-      data: {
-        users,
-      },
+      data: result.users,
+      pagination: result.pagination,
     });
   } catch (error) {
-    next(new AppError('获取用户列表失败', 500));
+    // 改进错误日志记录
+    console.error(`[ADMIN] 获取用户列表失败: ${error.message}`, error);
+    res.status(error.statusCode || 500).json({
+      status: 'error',
+      message: error.message || '获取用户列表失败',
+    });
   }
 };
 
 exports.getUserById = async (req, res, next) => {
   try {
-    const user = await getUserById(req.params.userId);
+    // 修改为调用 AdminService 的方法
+    const user = await AdminService.getUserById(req.params.userId);
+
     res.status(200).json({
       status: 'success',
-      data: {
-        user,
-      },
+      data: { user },
     });
   } catch (error) {
-    next(new AppError('获取用户信息失败', 500));
+    // 保持错误状态码传递
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
@@ -51,18 +86,16 @@ exports.updateUser = async (req, res, next) => {
 
 exports.deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findOneAndDelete({ customId: req.params.userId });
-
-    if (!user) {
-      return next(new AppError('用户不存在', 404));
-    }
+    // 调用服务层方法删除用户
+    await AdminService.deleteUser(req.params.userId);
 
     res.status(204).json({
       status: 'success',
       data: null,
     });
   } catch (error) {
-    next(new AppError('删除用户失败', 500));
+    // 传递服务层抛出的原始错误状态码
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
@@ -70,28 +103,16 @@ exports.updateUserStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
 
-    if (!['active', 'inactive', 'suspended'].includes(status)) {
-      return next(new AppError('无效的状态值', 400));
-    }
-
-    const user = await User.findOneAndUpdate(
-      { customId: req.params.userId },
-      { status },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!user) {
-      return next(new AppError('用户不存在', 404));
-    }
+    // 调用服务层方法更新状态
+    const user = await AdminService.updateUserStatus(req.params.userId, status);
 
     res.status(200).json({
       status: 'success',
-      data: {
-        user,
-      },
+      data: { user },
     });
   } catch (error) {
-    next(new AppError('更新用户状态失败', 500));
+    // 传递服务层原始错误状态码
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
@@ -99,81 +120,38 @@ exports.updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
 
-    if (!['admin', 'parent', 'teacher', 'student'].includes(role)) {
-      return next(new AppError('无效的角色值', 400));
-    }
-
-    const user = await User.findOneAndUpdate(
-      { customId: req.params.userId },
-      { role },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!user) {
-      return next(new AppError('用户不存在', 404));
-    }
+    const user = await AdminService.updateUserRole(req.params.userId, role);
 
     res.status(200).json({
       status: 'success',
-      data: {
-        user,
-      },
+      data: { user },
     });
   } catch (error) {
-    next(new AppError('更新用户角色失败', 500));
+    // 传递服务层原始错误信息
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
 // 教师管理
 exports.getAllTutors = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, status, verified, search } = req.query;
-    const skip = (page - 1) * limit;
-
-    // 构建查询条件
-    const query = {};
-    if (status) query.status = status;
-    if (verified !== undefined) query.isVerified = verified === 'true';
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { 'subjects.name': { $regex: search, $options: 'i' } },
-        { 'location.city': { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    // 执行查询
-    const tutors = await TutorProfile.find(query)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
-
-    const total = await TutorProfile.countDocuments(query);
+    const result = await AdminService.getAllTutors(req.query);
 
     res.status(200).json({
       status: 'success',
       data: {
-        tutors,
-        pagination: {
-          total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit),
-        },
+        tutors: result.tutors,
+        pagination: result.pagination,
       },
     });
   } catch (error) {
-    next(new AppError('获取教师列表失败', 500));
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
 exports.getTutorById = async (req, res, next) => {
   try {
-    const tutor = await TutorProfile.findOne({ tutorId: req.params.tutorId });
-
-    if (!tutor) {
-      return next(new AppError('教师不存在', 404));
-    }
+    const tutor = await AdminService.getTutorById(req.params.tutorId);
 
     res.status(200).json({
       status: 'success',
@@ -189,28 +167,19 @@ exports.getTutorById = async (req, res, next) => {
 exports.verifyTutor = async (req, res, next) => {
   try {
     const { isVerified } = req.body;
-
-    const tutor = await TutorProfile.findOneAndUpdate(
-      { tutorId: req.params.tutorId },
-      { isVerified, verifiedAt: isVerified ? new Date() : null },
-      { new: true, runValidators: true }
+    const tutor = await AdminService.verifyTutor(
+      req.params.tutorId,
+      isVerified
     );
-
-    if (!tutor) {
-      return next(new AppError('教师不存在', 404));
-    }
 
     res.status(200).json({
       status: 'success',
-      data: {
-        tutor,
-      },
+      data: { tutor },
     });
   } catch (error) {
-    next(new AppError('更新教师验证状态失败', 500));
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
-
 exports.updateTutorStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -284,149 +253,83 @@ exports.getAllPosts = async (req, res, next) => {
 
 exports.getPostById = async (req, res, next) => {
   try {
-    const post = await TutoringRequest.findById(req.params.postId);
-
-    if (!post) {
-      return next(new AppError('帖子不存在', 404));
-    }
+    const post = await AdminService.getPostById(req.params.postId);
 
     res.status(200).json({
       status: 'success',
-      data: {
-        post,
-      },
+      data: { post },
     });
   } catch (error) {
-    next(new AppError('获取帖子信息失败', 500));
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
-
 exports.updatePostStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-
-    if (!['published', 'pending', 'rejected'].includes(status)) {
-      return next(new AppError('无效的状态值', 400));
-    }
-
-    const post = await TutoringRequest.findByIdAndUpdate(
+    const post = await AdminService.updatePostStatus(
       req.params.postId,
-      {
-        status,
-        reviewedAt: new Date(),
-        reviewedBy: req.user.customId,
-      },
-      { new: true, runValidators: true }
+      status,
+      req.user.customId
     );
-
-    if (!post) {
-      return next(new AppError('帖子不存在', 404));
-    }
 
     res.status(200).json({
       status: 'success',
-      data: {
-        post,
-      },
+      data: { post },
     });
   } catch (error) {
-    next(new AppError('更新帖子状态失败', 500));
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
 exports.deletePost = async (req, res, next) => {
   try {
-    const post = await TutoringRequest.findByIdAndDelete(req.params.postId);
-
-    if (!post) {
-      return next(new AppError('帖子不存在', 404));
-    }
+    // 调用服务层方法，使用 requestId 进行删除
+    await AdminService.deletePost(req.params.postId);
 
     res.status(204).json({
       status: 'success',
       data: null,
     });
   } catch (error) {
-    next(new AppError('删除帖子失败', 500));
+    // 继承服务层抛出的错误信息
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
-exports.getReportedPosts = async (req, res, next) => {
+// ... 现有代码 ...
+
+exports.getReportedPosts = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (page - 1) * limit;
+    // 调用 AdminService 中的 getReportedPosts 方法
+    const result = await AdminService.getReportedPosts(req.query);
 
-    // 查询被举报的帖子
-    const posts = await TutoringRequest.find({ 'reports.0': { $exists: true } })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ 'reports.createdAt': -1 });
-
-    const total = await TutoringRequest.countDocuments({
-      'reports.0': { $exists: true },
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        posts,
-        pagination: {
-          total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit),
-        },
-      },
+    return res.status(200).json({
+      success: true,
+      data: result,
     });
   } catch (error) {
-    next(new AppError('获取被举报帖子列表失败', 500));
+    return errorHandler(res, error);
   }
 };
+
+// ... 现有代码 ...
 
 exports.reviewPost = async (req, res, next) => {
   try {
     const { action, reason } = req.body;
-
-    if (!['approve', 'reject', 'ignore'].includes(action)) {
-      return next(new AppError('无效的操作', 400));
-    }
-
-    let status;
-    switch (action) {
-      case 'approve':
-        status = 'published';
-        break;
-      case 'reject':
-        status = 'rejected';
-        break;
-      case 'ignore':
-        status = 'pending';
-        break;
-    }
-
-    const post = await TutoringRequest.findByIdAndUpdate(
-      req.params.postId,
-      {
-        status,
-        reviewedAt: new Date(),
-        reviewedBy: req.user.customId,
-        reviewNote: reason || '',
-      },
-      { new: true, runValidators: true }
+    const post = await AdminService.reviewPost(
+      req.params.postId, // 传入requestId
+      action,
+      reason,
+      req.user.customId
     );
-
-    if (!post) {
-      return next(new AppError('帖子不存在', 404));
-    }
 
     res.status(200).json({
       status: 'success',
-      data: {
-        post,
-      },
+      data: { post },
     });
   } catch (error) {
-    next(new AppError('审核帖子失败', 500));
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };
 
@@ -641,5 +544,33 @@ exports.getMatchStatistics = async (req, res, next) => {
     });
   } catch (error) {
     next(new AppError('获取匹配统计数据失败', 500));
+  }
+};
+
+exports.getPostsByCity = async (req, res, next) => {
+  try {
+    const { cityName } = req.params;
+    const result = await AdminService.getPostsByCity(cityName, req.query);
+    
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
+exports.getTutorsByCity = async (req, res, next) => {
+  try {
+    const { cityName } = req.params;
+    const result = await AdminService.getTutorsByCity(cityName, req.query);
+    
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(new AppError(error.message, error.statusCode || 500));
   }
 };

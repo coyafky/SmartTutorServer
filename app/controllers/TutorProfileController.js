@@ -1,7 +1,7 @@
 const TutorProfileService = require('../services/TutorProfileService');
 const { AppError } = require('../utils/errorHandler');
 const { log } = require('../utils/logger');
-
+const _ = require('lodash'); // 添加这行在文件顶部
 class TutorProfileController {
   /**
    * 创建教师资料卡
@@ -14,13 +14,16 @@ class TutorProfileController {
       const { user } = req;
       const profileData = req.body;
 
-      const profile = await TutorProfileService.createProfile(user.customId, profileData);
+      const profile = await TutorProfileService.createProfile(
+        user.customId,
+        profileData
+      );
 
       res.status(201).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -41,8 +44,8 @@ class TutorProfileController {
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -63,8 +66,8 @@ class TutorProfileController {
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -82,13 +85,16 @@ class TutorProfileController {
       const { user } = req;
       const updateData = req.body;
 
-      const profile = await TutorProfileService.updateProfile(user.customId, updateData);
+      const profile = await TutorProfileService.updateProfile(
+        user.customId,
+        updateData
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -104,12 +110,12 @@ class TutorProfileController {
   static async deleteProfile(req, res, next) {
     try {
       const { user } = req;
-      
+
       await TutorProfileService.deleteProfile(user.customId);
 
       res.status(204).json({
         status: 'success',
-        data: null
+        data: null,
       });
     } catch (error) {
       next(error);
@@ -131,13 +137,16 @@ class TutorProfileController {
         throw new AppError('状态不能为空', 400);
       }
 
-      const profile = await TutorProfileService.updateAvailabilityStatus(user.customId, status);
+      const profile = await TutorProfileService.updateAvailabilityStatus(
+        user.customId,
+        status
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -155,13 +164,16 @@ class TutorProfileController {
       const { user } = req;
       const subjectData = req.body;
 
-      const profile = await TutorProfileService.addSubject(user.customId, subjectData);
+      const profile = await TutorProfileService.addSubject(
+        user.customId,
+        subjectData
+      );
 
       res.status(201).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -180,13 +192,17 @@ class TutorProfileController {
       const { subjectId } = req.params;
       const updateData = req.body;
 
-      const profile = await TutorProfileService.updateSubject(user.customId, subjectId, updateData);
+      const profile = await TutorProfileService.updateSubject(
+        user.customId,
+        subjectId,
+        updateData
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -204,13 +220,16 @@ class TutorProfileController {
       const { user } = req;
       const { subjectId } = req.params;
 
-      const profile = await TutorProfileService.deleteSubject(user.customId, subjectId);
+      const profile = await TutorProfileService.deleteSubject(
+        user.customId,
+        subjectId
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -229,13 +248,17 @@ class TutorProfileController {
       const { subjectId } = req.params;
       const caseData = req.body;
 
-      const profile = await TutorProfileService.addSuccessCase(user.customId, subjectId, caseData);
+      const profile = await TutorProfileService.addSuccessCase(
+        user.customId,
+        subjectId,
+        caseData
+      );
 
       res.status(201).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -255,17 +278,17 @@ class TutorProfileController {
       const updateData = req.body;
 
       const profile = await TutorProfileService.updateSuccessCase(
-        user.customId, 
-        subjectId, 
-        caseId, 
+        user.customId,
+        subjectId,
+        caseId,
         updateData
       );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -284,16 +307,16 @@ class TutorProfileController {
       const { subjectId, caseId } = req.params;
 
       const profile = await TutorProfileService.deleteSuccessCase(
-        user.customId, 
-        subjectId, 
+        user.customId,
+        subjectId,
         caseId
       );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -311,13 +334,16 @@ class TutorProfileController {
       const { user } = req;
       const sessionData = req.body;
 
-      const profile = await TutorProfileService.addTimeSession(user.customId, sessionData);
+      const profile = await TutorProfileService.addTimeSession(
+        user.customId,
+        sessionData
+      );
 
       res.status(201).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -337,16 +363,16 @@ class TutorProfileController {
       const updateData = req.body;
 
       const profile = await TutorProfileService.updateTimeSession(
-        user.customId, 
-        sessionId, 
+        user.customId,
+        sessionId,
         updateData
       );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -364,13 +390,16 @@ class TutorProfileController {
       const { user } = req;
       const { sessionId } = req.params;
 
-      const profile = await TutorProfileService.deleteTimeSession(user.customId, sessionId);
+      const profile = await TutorProfileService.deleteTimeSession(
+        user.customId,
+        sessionId
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -388,13 +417,16 @@ class TutorProfileController {
       const { user } = req;
       const defaultTimes = req.body;
 
-      const profile = await TutorProfileService.updateDefaultTimes(user.customId, defaultTimes);
+      const profile = await TutorProfileService.updateDefaultTimes(
+        user.customId,
+        defaultTimes
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -412,13 +444,16 @@ class TutorProfileController {
       const { user } = req;
       const locationData = req.body;
 
-      const profile = await TutorProfileService.updateLocation(user.customId, locationData);
+      const profile = await TutorProfileService.updateLocation(
+        user.customId,
+        locationData
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -436,13 +471,16 @@ class TutorProfileController {
       const { user } = req;
       const pricingData = req.body;
 
-      const profile = await TutorProfileService.updatePricing(user.customId, pricingData);
+      const profile = await TutorProfileService.updatePricing(
+        user.customId,
+        pricingData
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -460,13 +498,16 @@ class TutorProfileController {
       const { user } = req;
       const styleData = req.body;
 
-      const profile = await TutorProfileService.updateTeachingStyle(user.customId, styleData);
+      const profile = await TutorProfileService.updateTeachingStyle(
+        user.customId,
+        styleData
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
-          profile
-        }
+          profile,
+        },
       });
     } catch (error) {
       next(error);
@@ -487,7 +528,7 @@ class TutorProfileController {
         limit: parseInt(req.query.limit) || 10,
         sortBy: req.query.sortBy || 'ratings.overall',
         sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
-        fields: req.query.fields
+        fields: req.query.fields,
       };
 
       const result = await TutorProfileService.queryTutors(filters, options);
@@ -496,8 +537,8 @@ class TutorProfileController {
         status: 'success',
         data: {
           tutors: result.tutors,
-          pagination: result.pagination
-        }
+          pagination: result.pagination,
+        },
       });
     } catch (error) {
       next(error);
@@ -518,17 +559,20 @@ class TutorProfileController {
         limit: parseInt(req.query.limit) || 10,
         sortBy: req.query.sortBy || 'ratings.overall',
         sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
-        fields: req.query.fields
+        fields: req.query.fields,
       };
 
-      const result = await TutorProfileService.findTutorsBySubject(subject, options);
+      const result = await TutorProfileService.findTutorsBySubject(
+        subject,
+        options
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
           tutors: result.tutors,
-          pagination: result.pagination
-        }
+          pagination: result.pagination,
+        },
       });
     } catch (error) {
       next(error);
@@ -549,17 +593,21 @@ class TutorProfileController {
         limit: parseInt(req.query.limit) || 10,
         sortBy: req.query.sortBy || 'ratings.overall',
         sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
-        fields: req.query.fields
+        fields: req.query.fields,
       };
 
-      const result = await TutorProfileService.findTutorsByLocation(city, district, options);
+      const result = await TutorProfileService.findTutorsByLocation(
+        city,
+        district,
+        options
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
           tutors: result.tutors,
-          pagination: result.pagination
-        }
+          pagination: result.pagination,
+        },
       });
     } catch (error) {
       next(error);
@@ -575,7 +623,7 @@ class TutorProfileController {
   static async findNearbyTutors(req, res, next) {
     try {
       const { latitude, longitude, maxDistance } = req.query;
-      
+
       if (!latitude || !longitude) {
         throw new AppError('缺少位置信息', 400);
       }
@@ -585,7 +633,7 @@ class TutorProfileController {
         limit: parseInt(req.query.limit) || 10,
         sortBy: req.query.sortBy || 'ratings.overall',
         sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
-        fields: req.query.fields
+        fields: req.query.fields,
       };
 
       const result = await TutorProfileService.findNearbyTutors(
@@ -599,8 +647,8 @@ class TutorProfileController {
         status: 'success',
         data: {
           tutors: result.tutors,
-          pagination: result.pagination
-        }
+          pagination: result.pagination,
+        },
       });
     } catch (error) {
       next(error);
@@ -616,23 +664,100 @@ class TutorProfileController {
   static async getRecommendedTutors(req, res, next) {
     try {
       const studentPreferences = req.body;
-      
+
       const options = {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 10,
         sortBy: req.query.sortBy || 'ratings.overall',
         sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
-        fields: req.query.fields
+        fields: req.query.fields,
       };
 
-      const result = await TutorProfileService.getRecommendedTutors(studentPreferences, options);
+      const result = await TutorProfileService.getRecommendedTutors(
+        studentPreferences,
+        options
+      );
 
       res.status(200).json({
         status: 'success',
         data: {
           tutors: result.tutors,
-          pagination: result.pagination
-        }
+          pagination: result.pagination,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取教师所在城市的家教需求帖子
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   * @param {Function} next - 下一个中间件
+   */
+  static async getCityTutoringRequests(req, res, next) {
+    try {
+      const { user } = req;
+      const options = {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 10,
+        sortBy: req.query.sortBy || 'createdAt',
+        sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
+      };
+
+      const result = await TutorProfileService.getCityTutoringRequests(
+        user.customId,
+        options
+      );
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          requests: result.requests,
+          pagination: result.pagination,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  static async getCityTutoringRequestsWithFilters(req, res, next) {
+    try {
+      const { user } = req;
+      const filters = _.pick(req.query, [
+        'subject',
+        'grade',
+        'educationLevel',
+        'minPrice',
+        'maxPrice',
+        'session.day',
+        'session.period',
+      ]);
+      const options = {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 10,
+        sortBy: req.query.sortBy || 'createdAt',
+        sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
+      };
+
+      // 转换价格参数为数字类型
+      if (filters.minPrice) filters.minPrice = Number(filters.minPrice);
+      if (filters.maxPrice) filters.maxPrice = Number(filters.maxPrice);
+
+      const result =
+        await TutorProfileService.getCityTutoringRequestsWithFilters(
+          user.customId,
+          filters,
+          options
+        );
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          requests: result.requests,
+          pagination: result.pagination,
+        },
       });
     } catch (error) {
       next(error);

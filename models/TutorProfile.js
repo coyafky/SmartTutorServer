@@ -153,7 +153,7 @@ const TutorProfileSchema = new Schema({
    */
   isVerified: {
     type: Boolean,
-    default: false
+    default: false,
   },
 
   /**
@@ -171,7 +171,7 @@ const TutorProfileSchema = new Schema({
   status: {
     type: String,
     enum: ['active', 'inactive', 'suspended'],
-    default: 'active'
+    default: 'active',
   },
 
   /**
@@ -340,26 +340,27 @@ const TutorProfileSchema = new Schema({
      * @type {Object}
      */
     geo: {
-      /** 坐标类型 - GeoJSON 类型，固定为 Point @type {String} */
       type: {
         type: String,
-        enum: ['Point'], // 限定只能是点类型
         default: 'Point',
+        enum: ['Point'],
       },
-
-      /**
-       * 坐标数组 - [经度, 纬度]
-       * @type {Number[]}
-       */
       coordinates: {
         type: [Number],
-        required: true,
+        default: undefined,
         validate: {
           validator: function (v) {
-            // 验证经度在 -180 到 180 之间，纬度在 -90 到 90 之间
-            return v[0] >= -180 && v[0] <= 180 && v[1] >= -90 && v[1] <= 90;
+            // 只在有值时验证
+            if (!v) return true;
+            return (
+              v.length === 2 &&
+              v[0] >= -180 &&
+              v[0] <= 180 &&
+              v[1] >= -90 &&
+              v[1] <= 90
+            );
           },
-          message: '无效的坐标范围',
+          message: '无效的坐标范围，经度应在-180到180之间，纬度应在-90到90之间',
         },
       },
     },

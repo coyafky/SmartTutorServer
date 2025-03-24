@@ -16,6 +16,20 @@ const validateParentRole = (req, res, next) => {
   next();
 };
 
+// 新增教师角色验证中间件
+const validateTeacherRole = (req, res, next) => {
+  if (!req.user) {
+    return next(new AppError('未经授权的访问', 401));
+  }
+
+  if (req.user.role !== 'teacher') {
+    return next(new AppError('只有教师可以执行此操作', 403));
+  }
+
+  next();
+};
+
 module.exports = {
-  validateParentRole
+  validateParentRole,
+  validateTeacherRole // 导出新增的中间件
 };

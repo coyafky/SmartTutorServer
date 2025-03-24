@@ -3,7 +3,8 @@ const User = require('../../models/User');
 const { AppError } = require('../utils/errorHandler');
 const { log } = require('../utils/logger');
 const mongoose = require('mongoose');
-
+const TutoringRequest = require('../../models/TutoringRequest'); // 导入 TutoringRequest 模型
+const _ = require('lodash'); // 添加这行在文件顶部
 class TutorProfileService {
   /**
    * 创建教师资料卡
@@ -622,30 +623,57 @@ class TutorProfileService {
   static async updateLocation(tutorId, locationData) {
     log.info(`更新教师 ${tutorId} 的位置信息`);
 
-    const profile = await TutorProfile.findOneAndUpdate(
-      { tutorId },
-      {
-        location: locationData,
-        updatedAt: new Date(),
+    // 验证并格式化地理位置数据
+    const locationUpdate = {
+      address: locationData.address,
+      district: locationData.district,
+      city: locationData.city,
+      geo: {
+        type: 'Point',
+        coordinates: locationData.geo?.coordinates || [0, 0],
       },
-      { new: true }
-    );
+    };
 
-    if (!profile) {
-      log.warn(`更新位置信息失败: 教师 ${tutorId} 资料卡不存在`);
-      throw new AppError('教师资料卡不存在', 404);
+    // 验证经纬度范围
+    const [longitude, latitude] = locationUpdate.geo.coordinates;
+    if (
+      longitude < -180 ||
+      longitude > 180 ||
+      latitude < -90 ||
+      latitude > 90
+    ) {
+      throw new AppError('无效的经纬度坐标范围', 400);
     }
 
-    log.info(`位置信息更新成功: ${tutorId}`);
-    return profile;
+    try {
+      const profile = await TutorProfile.findOneAndUpdate(
+        { tutorId },
+        {
+          location: locationUpdate,
+          updatedAt: new Date(),
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      if (!profile) {
+        log.warn(`更新位置信息失败: 教师 ${tutorId} 资料卡不存在`);
+        throw new AppError('教师资料卡不存在', 404);
+      }
+
+      log.info(`位置信息更新成功: ${tutorId}`);
+      return profile;
+    } catch (error) {
+      log.error(`更新位置信息失败: ${error.message}`);
+      if (error.name === 'ValidationError') {
+        throw new AppError(`位置信息验证失败: ${error.message}`, 400);
+      }
+      throw error;
+    }
   }
 
-  /**
-   * 更新教师价格设置
-   * @param {String} tutorId - 教师ID
-   * @param {Object} pricingData - 价格设置
-   * @returns {Promise<Object>} - 更新后的资料卡
-   */
   static async updatePricing(tutorId, pricingData) {
     log.info(`更新教师 ${tutorId} 的价格设置`);
 
@@ -1080,7 +1108,7 @@ class TutorProfileService {
 
     return this.queryTutors(filters, options);
   }
-  
+
   /**
    * 获取教师所在城市的家教需求帖子
    * @param {String} tutorId - 教师ID
@@ -1090,65 +1118,65 @@ class TutorProfileService {
   static async getCityTutoringRequests(tutorId, options = {}) {
     try {
       log.info(`获取教师 ${tutorId} 所在城市的家教需求帖子`);
-      
+
       // 获取教师资料卡
       const tutorProfile = await TutorProfile.findOne({ tutorId });
       if (!tutorProfile) {
         throw new AppError('教师资料卡不存在', 404);
       }
-      
+
       // 获取教师所在城市
       const city = tutorProfile.location.city;
       if (!city) {
         throw new AppError('教师没有设置城市信息', 400);
       }
-      
+
       // 设置分页参数
-      const { 
-        page = 1, 
-        limit = 10, 
-        sortBy = 'createdAt', 
-        sortOrder = -1 
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = 'createdAt',
+        sortOrder = -1,
       } = options;
-      
+
       const skip = (page - 1) * limit;
       const sort = {};
       sort[sortBy] = sortOrder;
-      
-      // 查询当前城市的开放状态的帖子
+
+      // 修改查询条件，使用 $in 操作符
       const requests = await TutoringRequest.find({
         'location.city': city,
-        'status': 'open',
-        'status': 'published'
+        status: { $in: ['open', 'published'] },
       })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort(sort);
-      
-      // 统计总数
+        .skip(skip)
+        .limit(parseInt(limit))
+        .sort(sort);
+
+      // 同样修改计数查询
       const total = await TutoringRequest.countDocuments({
         'location.city': city,
-        'status': 'open',
-        'status': 'published'
+        status: { $in: ['open', 'published'] },
       });
-      
-      log.info(`成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`);
-      
+
+      log.info(
+        `成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`
+      );
+
       return {
         requests,
         pagination: {
           total,
           page: parseInt(page),
           limit: parseInt(limit),
-          pages: Math.ceil(total / limit)
-        }
+          pages: Math.ceil(total / limit),
+        },
       };
     } catch (error) {
       log.error(`获取教师所在城市的家教需求帖子失败: ${error.message}`, error);
       throw error;
     }
   }
-  
+
   /**
    * 根据多个条件获取教师所在城市的家教需求帖子
    * @param {String} tutorId - 教师ID
@@ -1156,50 +1184,57 @@ class TutorProfileService {
    * @param {Object} options - 分页和排序选项
    * @returns {Promise<Object>} - 帖子列表和分页信息
    */
-  static async getCityTutoringRequestsWithFilters(tutorId, filters = {}, options = {}) {
+  static async getCityTutoringRequestsWithFilters(
+    tutorId,
+    filters = {},
+    options = {}
+  ) {
     try {
-      log.info(`获取教师 ${tutorId} 所在城市的家教需求帖子，带筛选条件: ${JSON.stringify(filters)}`);
-      
+      log.info(
+        `获取教师 ${tutorId} 所在城市的家教需求帖子，带筛选条件: ${JSON.stringify(
+          filters
+        )}`
+      );
+
       // 获取教师资料卡
       const tutorProfile = await TutorProfile.findOne({ tutorId });
       if (!tutorProfile) {
         throw new AppError('教师资料卡不存在', 404);
       }
-      
+
       // 获取教师所在城市
       const city = tutorProfile.location.city;
       if (!city) {
         throw new AppError('教师没有设置城市信息', 400);
       }
-      
+
       // 构建查询条件
       const query = {
         'location.city': city,
-        'status': 'open',
-        'status': 'published'
+        status: { $in: ['open', 'published'] }, // 修改这里，使用 $in 操作符
       };
-      
+
       // 添加科目筛选
       if (filters.subject) {
         query['subjects.name'] = filters.subject;
       }
-      
+
       // 添加年级筛选
       if (filters.grade) {
         query['grade'] = filters.grade;
       }
-      
+
       // 添加教育水平筛选
       if (filters.educationLevel) {
         query['preferences.educationLevel'] = filters.educationLevel;
       }
-      
+
       // 添加价格区间筛选
       if (filters.minPrice !== undefined && filters.maxPrice !== undefined) {
         query['preferences.priceRange.min'] = { $lte: filters.maxPrice };
         query['preferences.priceRange.max'] = { $gte: filters.minPrice };
       }
-      
+
       // 添加开课时间筛选
       if (filters.session) {
         if (filters.session.day) {
@@ -1209,41 +1244,46 @@ class TutorProfileService {
           query['preferences.schedule.periods'] = filters.session.period;
         }
       }
-      
+
       // 设置分页参数
-      const { 
-        page = 1, 
-        limit = 10, 
-        sortBy = 'createdAt', 
-        sortOrder = -1 
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = 'createdAt',
+        sortOrder = -1,
       } = options;
-      
+
       const skip = (page - 1) * limit;
       const sort = {};
       sort[sortBy] = sortOrder;
-      
+
       // 执行查询
       const requests = await TutoringRequest.find(query)
         .skip(skip)
         .limit(parseInt(limit))
         .sort(sort);
-      
+
       // 统计总数
       const total = await TutoringRequest.countDocuments(query);
-      
-      log.info(`成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`);
-      
+
+      log.info(
+        `成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`
+      );
+
       return {
         requests,
         pagination: {
           total,
           page: parseInt(page),
           limit: parseInt(limit),
-          pages: Math.ceil(total / limit)
-        }
+          pages: Math.ceil(total / limit),
+        },
       };
     } catch (error) {
-      log.error(`根据条件获取教师所在城市的家教需求帖子失败: ${error.message}`, error);
+      log.error(
+        `根据条件获取教师所在城市的家教需求帖子失败: ${error.message}`,
+        error
+      );
       throw error;
     }
   }

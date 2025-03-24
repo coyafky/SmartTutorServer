@@ -19,9 +19,9 @@ const ratingSchema = new mongoose.Schema({
   matchId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: 'Match'
+    ref: 'Match',
   },
-  
+
   /**
    * 评价者ID
    * 发起评价的用户ID（可能是家长或教师）
@@ -29,9 +29,9 @@ const ratingSchema = new mongoose.Schema({
    */
   ratedBy: {
     type: String,
-    required: true
+    required: true,
   },
-  
+
   /**
    * 评价者类型
    * 标识评价者是家长还是教师
@@ -39,10 +39,10 @@ const ratingSchema = new mongoose.Schema({
    */
   raterType: {
     type: String,
-    enum: ['parent', 'tutor'],
-    required: true
+    enum: ['parent', 'teacher'],
+    required: true,
   },
-  
+
   /**
    * 被评价者ID
    * 被评价的用户ID（可能是家长或教师）
@@ -50,9 +50,9 @@ const ratingSchema = new mongoose.Schema({
    */
   ratedUser: {
     type: String,
-    required: true
+    required: true,
   },
-  
+
   /**
    * 总体评分
    * 对整体服务的评分
@@ -62,9 +62,9 @@ const ratingSchema = new mongoose.Schema({
     type: Number,
     min: 1,
     max: 5,
-    required: true
+    required: true,
   },
-  
+
   /**
    * 教学质量评分
    * 评价教师的教学质量（仅当评价对象为教师时适用）
@@ -73,9 +73,9 @@ const ratingSchema = new mongoose.Schema({
   teachingQuality: {
     type: Number,
     min: 1,
-    max: 5
+    max: 5,
   },
-  
+
   /**
    * 课堂表现评分
    * 评价教师的课堂表现或学生的课堂表现
@@ -84,9 +84,9 @@ const ratingSchema = new mongoose.Schema({
   classroomPerformance: {
     type: Number,
     min: 1,
-    max: 5
+    max: 5,
   },
-  
+
   /**
    * 学生进步程度评分
    * 评价学生在教师辅导下的进步程度（仅当评价对象为教师时适用）
@@ -95,9 +95,9 @@ const ratingSchema = new mongoose.Schema({
   studentProgress: {
     type: Number,
     min: 1,
-    max: 5
+    max: 5,
   },
-  
+
   /**
    * 沟通能力评分
    * 评价用户的沟通能力
@@ -106,9 +106,9 @@ const ratingSchema = new mongoose.Schema({
   communication: {
     type: Number,
     min: 1,
-    max: 5
+    max: 5,
   },
-  
+
   /**
    * 准时率评分
    * 评价用户的准时情况
@@ -117,9 +117,9 @@ const ratingSchema = new mongoose.Schema({
   punctuality: {
     type: Number,
     min: 1,
-    max: 5
+    max: 5,
   },
-  
+
   /**
    * 文字评价
    * 详细的文字评价内容
@@ -127,18 +127,20 @@ const ratingSchema = new mongoose.Schema({
    */
   reviewText: {
     type: String,
-    maxlength: 1000
+    maxlength: 1000,
   },
-  
+
   /**
    * 标签
    * 评价标签，如"耐心", "专业", "有趣"等
    * @type {Array}
    */
-  tags: [{
-    type: String
-  }],
-  
+  tags: [
+    {
+      type: String,
+    },
+  ],
+
   /**
    * 创建时间
    * 记录评价创建的时间
@@ -146,9 +148,9 @@ const ratingSchema = new mongoose.Schema({
    */
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
-  
+
   /**
    * 更新时间
    * 记录评价最后更新的时间
@@ -156,8 +158,8 @@ const ratingSchema = new mongoose.Schema({
    */
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 /**

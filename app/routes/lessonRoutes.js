@@ -17,15 +17,19 @@ router.use(authenticateToken);
  * @desc 创建新课程
  * @access 私有
  */
-router.post('/', [
-  check('tutorId', '教师ID是必需的').not().isEmpty(),
-  check('parentId', '家长ID是必需的').not().isEmpty(),
-  check('student.name', '学生姓名是必需的').not().isEmpty(),
-  check('subject', '学科是必需的').not().isEmpty(),
-  check('date', '日期是必需的').isISO8601(),
-  check('startTime', '开始时间是必需的').not().isEmpty(),
-  check('endTime', '结束时间是必需的').not().isEmpty()
-], LessonController.createLesson);
+router.post(
+  '/',
+  [
+    check('tutorId', '教师ID是必需的').not().isEmpty(),
+    check('parentId', '家长ID是必需的').not().isEmpty(),
+    check('student.name', '学生姓名是必需的').not().isEmpty(),
+    check('subject', '学科是必需的').not().isEmpty(),
+    check('date', '日期是必需的').isISO8601(),
+    check('startTime', '开始时间是必需的').not().isEmpty(),
+    check('endTime', '结束时间是必需的').not().isEmpty(),
+  ],
+  LessonController.createLesson
+);
 
 /**
  * @route GET /api/lessons/:lessonId
@@ -46,9 +50,18 @@ router.put('/:lessonId', LessonController.updateLesson);
  * @desc 更新课程状态
  * @access 私有
  */
-router.patch('/:lessonId/status', [
-  check('status', '状态是必需的').isIn(['pending', 'confirmed', 'cancelled', 'completed'])
-], LessonController.updateLessonStatus);
+router.patch(
+  '/:lessonId/status',
+  [
+    check('status', '状态是必需的').isIn([
+      'pending',
+      'confirmed',
+      'cancelled',
+      'completed',
+    ]),
+  ],
+  LessonController.updateLessonStatus
+);
 
 /**
  * @route DELETE /api/lessons/:lessonId
@@ -76,10 +89,14 @@ router.get('/calendar', LessonController.getLessonCalendar);
  * @desc 添加课程材料
  * @access 私有
  */
-router.post('/:lessonId/materials', [
-  check('title', '标题是必需的').not().isEmpty(),
-  check('fileUrl', '文件URL是必需的').not().isEmpty()
-], LessonController.addLessonMaterial);
+router.post(
+  '/:lessonId/materials',
+  [
+    check('title', '标题是必需的').not().isEmpty(),
+    check('fileUrl', '文件URL是必需的').not().isEmpty(),
+  ],
+  LessonController.addLessonMaterial
+);
 
 /**
  * @route POST /api/lessons/reminders/process
