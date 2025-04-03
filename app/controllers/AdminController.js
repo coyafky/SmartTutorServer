@@ -1,6 +1,8 @@
 const User = require('../../models/User');
 const TutorProfile = require('../../models/TutorProfile');
 const TutoringRequest = require('../../models/TutoringRequest');
+const Parent = require('../../models/Parent');
+const Match = require('../../models/Match');
 const { AppError } = require('../utils/errorHandler');
 const {
   getAllUsers,
@@ -30,6 +32,22 @@ const AdminService = require('../services/AdminService');
 // 用户管理
 exports.getAllUsers = async (req, res, next) => {
   try {
+    // 检查是否要获取所有用户
+    const { all = false } = req.query;
+    
+    if (all === 'true') {
+      // 获取所有用户，不使用分页
+      const result = await AdminService.getAllUsersWithoutPagination(req.query);
+      
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          users: result.users,
+          total: result.total
+        },
+      });
+    }
+    
     // 添加分页参数处理
     const options = {
       page: parseInt(req.query.page) || 1,
@@ -53,6 +71,40 @@ exports.getAllUsers = async (req, res, next) => {
     });
   }
 };
+
+
+
+
+exports.getAllUserByLimit = async (req, res, next) => {
+  try {
+    // 从请求中获取分页参数和过滤条件
+    const { page = 1, limit = 10 } = req.query;
+    
+    // 提取过滤条件
+    const filters = {
+      role: req.query.role,
+      status: req.query.status,
+      search: req.query.search,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder
+    };
+
+    // 调用 AdminService 的方法获取分页数据
+    const result = await AdminService.getUsersByLimit(page, limit, filters);
+
+    // 返回成功响应
+    res.status(200).json({
+      status: 'success',
+      data: result.users,
+      pagination: result.pagination
+    });
+  } catch (error) {
+    // 错误处理
+    console.error(`[ADMIN] 分页获取用户列表失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
 
 exports.getUserById = async (req, res, next) => {
   try {
@@ -148,6 +200,39 @@ exports.getAllTutors = async (req, res, next) => {
     next(new AppError(error.message, error.statusCode || 500));
   }
 };
+exports.getAllTutorsLimit = async(req,res,next)=>{
+  try{
+    // 从请求中获取分页参数和过滤条件
+    const { page = 1, limit = 10 } = req.query;
+    
+    // 提取过滤条件
+    const filters = {
+      status: req.query.status,
+      isVerified: req.query.isVerified,
+      city: req.query.city,
+      district: req.query.district,
+      subject: req.query.subject,
+      search: req.query.search,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder
+    };
+
+    // 调用 AdminService 的方法获取分页数据
+    const result = await AdminService.getTutorsByLimit(page, limit, filters);
+
+    // 返回成功响应
+    res.status(200).json({
+      status: 'success',
+      data: result.tutors,
+      pagination: result.pagination
+    });
+  } catch (error) {
+    // 错误处理
+    console.error(`[ADMIN] 分页获取教师列表失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
 
 exports.getTutorById = async (req, res, next) => {
   try {
@@ -160,7 +245,8 @@ exports.getTutorById = async (req, res, next) => {
       },
     });
   } catch (error) {
-    next(new AppError('获取教师信息失败', 500));
+    console.error(`[ADMIN] 获取教师信息失败: ${error.message}`, error);
+    next(new AppError(`获取教师信息失败: ${error.message}`, error.statusCode || 500));
   }
 };
 
@@ -212,25 +298,39 @@ exports.updateTutorStatus = async (req, res, next) => {
 // 内容审核
 exports.getAllPosts = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, status, type, search } = req.query;
-    const skip = (page - 1) * limit;
-
+    const { status, search, sort = 'createdAt' } = req.query;
+    
     // 构建查询条件
     const query = {};
     if (status) query.status = status;
-    if (type) query.type = type;
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
+        { 'location.city': { $regex: search, $options: 'i' } },
+        { 'location.district': { $regex: search, $options: 'i' } },
+        { 'subjects.name': { $regex: search, $options: 'i' } },
       ];
     }
 
-    // 执行查询
+    // 构建排序条件
+    let sortOption = {};
+    switch (sort) {
+      case 'createdAt':
+        sortOption = { createdAt: -1 };
+        break;
+      case 'grade':
+        sortOption = { grade: 1 };
+        break;
+      case 'status':
+        sortOption = { status: 1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    // 执行查询 - 获取所有帖子，不使用分页
     const posts = await TutoringRequest.find(query)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .sort(sortOption)
+      .select('requestId status grade subjects location preferences parentId createdAt reviewedAt');
 
     const total = await TutoringRequest.countDocuments(query);
 
@@ -238,12 +338,7 @@ exports.getAllPosts = async (req, res, next) => {
       status: 'success',
       data: {
         posts,
-        pagination: {
-          total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit),
-        },
+        total
       },
     });
   } catch (error) {
@@ -513,10 +608,13 @@ exports.getMatchStatistics = async (req, res, next) => {
     // 获取匹配统计数据
     // 这里需要根据实际的数据模型进行调整
     const totalMatches = await Match.countDocuments();
-    const successfulMatches = await Match.countDocuments({
-      status: 'successful',
+    const completedMatches = await Match.countDocuments({
+      status: 'completed',
     });
     const pendingMatches = await Match.countDocuments({ status: 'pending' });
+    const acceptedMatches = await Match.countDocuments({ status: 'accepted' });
+    const rejectedMatches = await Match.countDocuments({ status: 'rejected' });
+    const cancelledMatches = await Match.countDocuments({ status: 'cancelled' });
 
     // 按月统计匹配
     const monthlyStats = await Match.aggregate([
@@ -533,13 +631,27 @@ exports.getMatchStatistics = async (req, res, next) => {
       { $limit: 12 },
     ]);
 
+    // 按状态分组统计
+    const statusStats = await Match.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
     res.status(200).json({
       status: 'success',
       data: {
         totalMatches,
-        successfulMatches,
+        completedMatches,
         pendingMatches,
+        acceptedMatches,
+        rejectedMatches,
+        cancelledMatches,
         monthlyStats,
+        statusStats,
       },
     });
   } catch (error) {

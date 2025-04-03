@@ -5,6 +5,7 @@ const { log } = require('../utils/logger');
 const mongoose = require('mongoose');
 const TutoringRequest = require('../../models/TutoringRequest'); // 导入 TutoringRequest 模型
 const _ = require('lodash'); // 添加这行在文件顶部
+
 class TutorProfileService {
   /**
    * 创建教师资料卡
@@ -28,24 +29,43 @@ class TutorProfileService {
       throw new AppError('只有教师角色可以创建教师资料卡', 403);
     }
 
-    // 检查是否已存在资料卡
-    const existingProfile = await TutorProfile.findOne({ tutorId: userId });
-    if (existingProfile) {
+    // 检查是否已存在资料卡（基于用户ID而非tutorId）
+    const existingUserProfile = await TutorProfile.findOne({
+      userId: user._id,
+    });
+    if (existingUserProfile) {
       log.warn(`创建资料卡失败: 用户 ${userId} 已有教师资料卡`);
       throw new AppError('该用户已有教师资料卡', 409);
     }
 
     try {
-      // 创建资料卡
-      const profile = await TutorProfile.create({
-        tutorId: userId,
-        userId: user._id,
+      // 使用用户的 customId 作为 tutorId，保持一致性
+      const tutorId = user.customId;
+      log.info(`使用用户的 customId 作为 tutorId: ${tutorId}`);
+      
+      // 检查 tutorId 是否已存在于其他教师资料中
+      const existingTutorProfile = await TutorProfile.findOne({ tutorId });
+      if (existingTutorProfile) {
+        log.warn(`创建资料卡失败: tutorId ${tutorId} 已存在于其他教师资料中`);
+        throw new AppError('教师ID已存在，请联系管理员', 409);
+      }
+
+      // 创建资料卡，使用用户的 customId 作为 tutorId
+      const profileToCreate = {
         ...profileData,
+        tutorId: tutorId,
+        userId: user._id,
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
+      };
+      
+      // 删除可能存在的其他 tutorId
+      delete profileData.tutorId;
+      
+      log.info(`准备创建教师资料卡，使用 tutorId: ${tutorId}`);
+      const profile = await TutorProfile.create(profileToCreate);
 
-      log.info(`教师资料卡创建成功: ${userId}`);
+      log.info(`教师资料卡创建成功: ${tutorId}`);
       return profile;
     } catch (error) {
       log.error(`创建教师资料卡时发生错误: ${error.message}`, error);
@@ -53,7 +73,14 @@ class TutorProfileService {
       // 处理验证错误
       if (error.name === 'ValidationError') {
         const messages = Object.values(error.errors).map((err) => err.message);
+        log.error(`验证错误详情: ${JSON.stringify(error.errors)}`);
         throw new AppError(`验证错误: ${messages.join(', ')}`, 400);
+      }
+
+      // 处理重复键错误
+      if (error.code === 11000) {
+        log.error(`重复键错误: ${JSON.stringify(error.keyValue)}`);
+        throw new AppError('创建教师资料卡失败，ID已存在', 409);
       }
 
       throw error;
@@ -871,15 +898,13 @@ class TutorProfileService {
   /**
    * 查询教师列表
    * @param {Object} filters - 过滤条件
-   * @param {Object} options - 分页和排序选项
+   * @param {Object} options - 排序选项
    * @returns {Promise<Object>} - 教师列表和分页信息
    */
   static async queryTutors(filters = {}, options = {}) {
     log.info(`查询教师列表: ${JSON.stringify(filters)}`);
 
     const {
-      page = 1,
-      limit = 10,
       sortBy = 'ratings.overall',
       sortOrder = -1,
       fields,
@@ -967,9 +992,6 @@ class TutorProfileService {
       ];
     }
 
-    // 计算分页
-    const skip = (page - 1) * limit;
-
     // 构建排序
     const sort = {};
     sort[sortBy] = sortOrder;
@@ -983,16 +1005,14 @@ class TutorProfileService {
       : {};
 
     try {
-      // 执行查询
+      // 执行查询 - 移除分页限制，返回所有结果
       const tutors = await TutorProfile.find(query)
         .select(projection)
         .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit))
         .lean();
 
       // 获取总数
-      const total = await TutorProfile.countDocuments(query);
+      const total = tutors.length;
 
       log.info(`查询教师列表成功: 找到 ${total} 条记录`);
 
@@ -1000,9 +1020,9 @@ class TutorProfileService {
         tutors,
         pagination: {
           total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit),
+          page: 1,
+          limit: total,
+          pages: 1,
         },
       };
     } catch (error) {
@@ -1112,7 +1132,7 @@ class TutorProfileService {
   /**
    * 获取教师所在城市的家教需求帖子
    * @param {String} tutorId - 教师ID
-   * @param {Object} options - 分页和排序选项
+   * @param {Object} options - 排序选项
    * @returns {Promise<Object>} - 帖子列表和分页信息
    */
   static async getCityTutoringRequests(tutorId, options = {}) {
@@ -1131,32 +1151,28 @@ class TutorProfileService {
         throw new AppError('教师没有设置城市信息', 400);
       }
 
-      // 设置分页参数
+      // 设置排序参数
       const {
-        page = 1,
-        limit = 10,
         sortBy = 'createdAt',
         sortOrder = -1,
       } = options;
 
-      const skip = (page - 1) * limit;
       const sort = {};
       sort[sortBy] = sortOrder;
 
-      // 修改查询条件，使用 $in 操作符
+      // 创建城市匹配模式 - 处理"北京"和"北京市"这样的差异
+      // 移除"市"、"省"、"自治区"等后缀，只保留主要名称
+      const cityPattern = city.replace(/(市|省|自治区|特别行政区)$/, '');
+      
+      // 使用正则表达式进行模糊匹配
       const requests = await TutoringRequest.find({
-        'location.city': city,
+        'location.city': { $regex: new RegExp(`^${cityPattern}(市|省|自治区|特别行政区)?$`, 'i') },
         status: { $in: ['open', 'published'] },
       })
-        .skip(skip)
-        .limit(parseInt(limit))
         .sort(sort);
 
-      // 同样修改计数查询
-      const total = await TutoringRequest.countDocuments({
-        'location.city': city,
-        status: { $in: ['open', 'published'] },
-      });
+      // 统计总数
+      const total = requests.length;
 
       log.info(
         `成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`
@@ -1166,9 +1182,9 @@ class TutorProfileService {
         requests,
         pagination: {
           total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit),
+          page: 1,
+          limit: total,
+          pages: 1,
         },
       };
     } catch (error) {
@@ -1245,38 +1261,34 @@ class TutorProfileService {
         }
       }
 
-      // 设置分页参数
+      // 设置排序参数（保留排序功能）
       const {
-        page = 1,
-        limit = 10,
         sortBy = 'createdAt',
         sortOrder = -1,
       } = options;
 
-      const skip = (page - 1) * limit;
       const sort = {};
       sort[sortBy] = sortOrder;
 
-      // 执行查询
+      // 执行查询 - 移除 skip 和 limit，返回所有结果
       const requests = await TutoringRequest.find(query)
-        .skip(skip)
-        .limit(parseInt(limit))
         .sort(sort);
 
       // 统计总数
-      const total = await TutoringRequest.countDocuments(query);
+      const total = requests.length;
 
       log.info(
         `成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`
       );
 
+      // 返回所有结果，但保持响应格式一致
       return {
         requests,
         pagination: {
           total,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(total / limit),
+          page: 1,
+          limit: total,
+          pages: 1,
         },
       };
     } catch (error) {

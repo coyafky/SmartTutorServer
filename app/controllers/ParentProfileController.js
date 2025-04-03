@@ -9,7 +9,7 @@ class ParentProfileController {
       // 使用用户的 customId 作为 parentId
       const profileData = { ...req.body, parentId: req.user.customId };
       const profile = await ParentProfileService.createProfile(profileData);
-      
+
       res.status(201).json({
         status: 'success',
         data: profile,
@@ -158,7 +158,9 @@ class ParentProfileController {
   // 获取同城市的教师列表
   static async getTutorsByCity(req, res, next) {
     try {
-      const tutors = await ParentProfileService.getTutorsByCity(req.params.parentId);
+      const tutors = await ParentProfileService.getTutorsByCity(
+        req.params.parentId
+      );
       res.status(200).json({
         status: 'success',
         data: {
@@ -180,12 +182,12 @@ class ParentProfileController {
           message: '请提供科目名称',
         });
       }
-      
+
       const tutors = await ParentProfileService.getTutorsBySubject(
         req.params.parentId,
         subject
       );
-      
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -207,17 +209,17 @@ class ParentProfileController {
           message: '请提供经纬度坐标',
         });
       }
-      
+
       const location = {
         longitude: parseFloat(longitude),
         latitude: parseFloat(latitude),
       };
-      
+
       const tutors = await ParentProfileService.getTutorsByLocation(
         req.params.parentId,
         location
       );
-      
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -239,13 +241,13 @@ class ParentProfileController {
           message: '请提供最低和最高价格',
         });
       }
-      
+
       const tutors = await ParentProfileService.getTutorsByPriceRange(
         req.params.parentId,
         parseFloat(minPrice),
         parseFloat(maxPrice)
       );
-      
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -260,19 +262,21 @@ class ParentProfileController {
   // 按学历筛选教师
   static async getTutorsByEducation(req, res, next) {
     try {
-      const { educationLevel } = req.query;
-      if (!educationLevel) {
+      const { level } = req.query;
+      if (!level) {
         return res.status(400).json({
           status: 'fail',
           message: '请提供学历要求',
         });
       }
-      
+
+      console.log('收到按学历筛选请求:', { parentId: req.params.parentId, level });
+
       const tutors = await ParentProfileService.getTutorsByEducation(
         req.params.parentId,
-        educationLevel
+        level
       );
-      
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -294,13 +298,13 @@ class ParentProfileController {
           message: '请提供开课日期和时间段',
         });
       }
-      
+
       const session = { day, period };
       const tutors = await ParentProfileService.getTutorsBySession(
         req.params.parentId,
         session
       );
-      
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -325,12 +329,12 @@ class ParentProfileController {
         minExperience,
         availabilityStatus,
         day,
-        period
+        period,
       } = req.query;
-      
+
       // 构建条件对象
       const conditions = {};
-      
+
       if (subject) conditions.subject = subject;
       if (minPrice !== undefined && maxPrice !== undefined) {
         conditions.minPrice = parseFloat(minPrice);
@@ -339,18 +343,19 @@ class ParentProfileController {
       if (educationLevel) conditions.educationLevel = educationLevel;
       if (minRating) conditions.minRating = parseFloat(minRating);
       if (minExperience) conditions.minExperience = parseInt(minExperience);
-      if (availabilityStatus) conditions.availabilityStatus = availabilityStatus;
+      if (availabilityStatus)
+        conditions.availabilityStatus = availabilityStatus;
       if (day || period) {
         conditions.session = {};
         if (day) conditions.session.day = day;
         if (period) conditions.session.period = period;
       }
-      
+
       const tutors = await ParentProfileService.getTutorsByMultipleConditions(
         req.params.parentId,
         conditions
       );
-      
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -372,14 +377,14 @@ class ParentProfileController {
           message: '请提供科目、最低价格和最高价格',
         });
       }
-      
+
       const tutors = await ParentProfileService.getTutorsBySubjectAndPrice(
         req.params.parentId,
         subject,
         parseFloat(minPrice),
         parseFloat(maxPrice)
       );
-      
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -401,14 +406,15 @@ class ParentProfileController {
           message: '请提供科目、学历和最低评分',
         });
       }
-      
-      const tutors = await ParentProfileService.getTutorsBySubjectEducationAndRating(
-        req.params.parentId,
-        subject,
-        educationLevel,
-        parseFloat(minRating)
-      );
-      
+
+      const tutors =
+        await ParentProfileService.getTutorsBySubjectEducationAndRating(
+          req.params.parentId,
+          subject,
+          educationLevel,
+          parseFloat(minRating)
+        );
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -430,15 +436,16 @@ class ParentProfileController {
           message: '请提供开课日期、时间段、科目和最低教学经验',
         });
       }
-      
+
       const session = { day, period };
-      const tutors = await ParentProfileService.getTutorsBySessionSubjectAndExperience(
-        req.params.parentId,
-        session,
-        subject,
-        parseInt(minExperience)
-      );
-      
+      const tutors =
+        await ParentProfileService.getTutorsBySessionSubjectAndExperience(
+          req.params.parentId,
+          session,
+          subject,
+          parseInt(minExperience)
+        );
+
       res.status(200).json({
         status: 'success',
         data: {
@@ -449,6 +456,90 @@ class ParentProfileController {
       next(error);
     }
   }
+
+  // 多条件筛选教师（高级版，从请求体获取条件）
+  static async getTutorsByAdvancedFilter(req, res, next) {
+    try {
+      console.log('收到高级筛选请求:', {
+        parentId: req.params.parentId,
+        body: req.body
+      });
+
+      // 从请求体中获取筛选条件
+      const conditions = req.body;
+      
+      // 验证条件格式
+      if (!conditions || typeof conditions !== 'object') {
+        return res.status(400).json({
+          status: 'fail',
+          message: '请提供有效的筛选条件'
+        });
+      }
+      
+      // 处理数值类型参数
+      if (conditions.minPrice !== undefined) {
+        conditions.minPrice = parseFloat(conditions.minPrice);
+      }
+      if (conditions.maxPrice !== undefined) {
+        conditions.maxPrice = parseFloat(conditions.maxPrice);
+      }
+      if (conditions.minRating !== undefined) {
+        conditions.minRating = parseFloat(conditions.minRating);
+      }
+      if (conditions.minExperience !== undefined) {
+        conditions.minExperience = parseInt(conditions.minExperience);
+      }
+      
+      // 调用服务方法进行筛选
+      const tutors = await ParentProfileService.getTutorsByMultipleConditions(
+        req.params.parentId,
+        conditions
+      );
+      
+      // 返回筛选结果
+      res.status(200).json({
+        status: 'success',
+        data: {
+          tutors,
+          count: tutors.length,
+          conditions
+        }
+      });
+    } catch (error) {
+      console.error('高级筛选教师失败:', error);
+      next(error);
+    }
+  }
+
+  // 获取推荐教师
+  static async getRecommendedTutors(req, res, next) {
+    try {
+      const { limit } = req.query;
+      const limitNum = limit ? parseInt(limit) : 3;
+      
+      console.log('收到推荐教师请求:', { 
+        parentId: req.params.parentId,
+        limit: limitNum
+      });
+      
+      const tutors = await ParentProfileService.getRecommendedTutors(
+        req.params.parentId,
+        limitNum
+      );
+      
+      res.status(200).json({
+        status: 'success',
+        data: {
+          tutors,
+          count: tutors.length
+        }
+      });
+    } catch (error) {
+      console.error('获取推荐教师失败:', error);
+      next(error);
+    }
+  }
+
 }
 
 module.exports = ParentProfileController;

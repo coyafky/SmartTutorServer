@@ -12,119 +12,304 @@ class AdminService {
     const { page = 1, limit = 10, role, status, search } = queryParams;
     const skip = (page - 1) * limit;
 
-    // 构建查询条件
-    const query = {};
-    if (role) query.role = role;
-    if (status) query.status = status;
-    if (search) {
-      query.$or = [
-        { username: { $regex: search, $options: 'i' } },
+    try {
+      // 构建查询条件
+      const query = {};
+      if (role) query.role = role;
+      if (status) query.status = status;
+      if (search) {
+        query.$or = [
+          { username: { $regex: search, $options: 'i' } },
+          { customId: { $regex: search, $options: 'i' } },
+          { name: { $regex: search, $options: 'i' } },
+        ];
+      }
 
-        { name: { $regex: search, $options: 'i' } },
-      ];
+      // 使用投影只返回需要的字段，减少数据传输量
+      const projection = {
+        password: 0, // 排除密码字段
+        __v: 0, // 排除版本字段
+        // 可以根据需要添加或删除其他字段
+      };
+
+      // 并行执行查询和计数，提高性能
+      const [users, total] = await Promise.all([
+        User.find(query)
+          .select(projection)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .sort({ createdAt: -1 })
+          .lean(), // 使用 lean() 返回普通 JS 对象，提高性能
+
+        User.countDocuments(query),
+      ]);
+
+      return {
+        users,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      console.error('获取用户列表错误:', error);
+      throw new AppError('获取用户列表失败', 500);
     }
+  }
 
-    // 执行查询
-    const users = await User.find(query)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select('-password')
-      .sort({ createdAt: -1 });
+  // 获取所有用户，不使用分页
+  async getAllUsersWithoutPagination(queryParams) {
+    try {
+      const { role, status, search } = queryParams;
 
-    const total = await User.countDocuments(query);
+      // 构建查询条件
+      const query = {};
+      if (role) query.role = role;
+      if (status) query.status = status;
+      if (search) {
+        query.$or = [
+          { username: { $regex: search, $options: 'i' } },
+          { customId: { $regex: search, $options: 'i' } },
+          { name: { $regex: search, $options: 'i' } },
+        ];
+      }
 
-    return {
-      users,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit),
-      },
-    };
+      // 使用投影只返回需要的字段，减少数据传输量
+      const projection = {
+        password: 0, // 排除密码字段
+        __v: 0, // 排除版本字段
+      };
+
+      // 执行查询，不使用 skip 和 limit，获取所有符合条件的用户
+      const users = await User.find(query)
+        .select(projection)
+        .sort({ createdAt: -1 })
+        .lean(); // 使用 lean() 返回普通 JS 对象，提高性能
+
+      const total = users.length;
+
+      return {
+        users,
+        total
+      };
+    } catch (error) {
+      console.error('获取所有用户错误:', error);
+      throw new AppError('获取所有用户失败', 500);
+    }
   }
 
   async getUserById(userId) {
-    const user = await User.findOne({ customId: userId }).select('-password');
+    try {
+      const user = await User.findOne({ customId: userId }).select('-password');
 
-    if (!user) {
-      throw new AppError('用户不存在', 404);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      return user;
+    } catch (error) {
+      console.error(`获取用户详情错误 (ID: ${userId}):`, error);
+      throw new AppError(
+        error.message || '获取用户详情失败',
+        error.statusCode || 500
+      );
     }
-
-    return user;
   }
 
   async updateUser(userId, userData) {
-    const { username } = userData;
+    try {
+      const { username, email } = userData;
 
-    const user = await User.findOneAndUpdate(
-      { customId: userId },
-      { username },
-      { new: true, runValidators: true }
-    ).select('-password');
+      // 验证数据
+      if (!username) {
+        throw new AppError('用户名不能为空', 400);
+      }
 
-    if (!user) {
-      throw new AppError('用户不存在', 404);
+      // 检查用户名是否已存在（排除当前用户）
+      const existingUser = await User.findOne({
+        username,
+        customId: { $ne: userId },
+      });
+
+      if (existingUser) {
+        throw new AppError('用户名已被使用', 400);
+      }
+
+      // 构建更新对象
+      const updateData = { username };
+      if (email) updateData.email = email;
+
+      const user = await User.findOneAndUpdate(
+        { customId: userId },
+        updateData,
+        { new: true, runValidators: true }
+      ).select('-password');
+
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      return user;
+    } catch (error) {
+      console.error(`更新用户错误 (ID: ${userId}):`, error);
+      throw new AppError(
+        error.message || '更新用户失败',
+        error.statusCode || 500
+      );
     }
-
-    return user;
   }
 
   async deleteUser(userId) {
-    const user = await User.findOneAndDelete({ customId: userId });
+    try {
+      const user = await User.findOneAndDelete({ customId: userId });
 
-    if (!user) {
-      throw new AppError('用户不存在', 404);
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`删除用户错误 (ID: ${userId}):`, error);
+      throw new AppError(
+        error.message || '删除用户失败',
+        error.statusCode || 500
+      );
     }
-
-    return null;
   }
 
   async updateUserStatus(userId, status) {
-    if (!['active', 'inactive', 'suspended'].includes(status)) {
-      throw new AppError('无效的状态值', 400);
+    try {
+      if (!['active', 'inactive', 'suspended'].includes(status)) {
+        throw new AppError('无效的状态值', 400);
+      }
+
+      const user = await User.findOneAndUpdate(
+        { customId: userId },
+        { status },
+        { new: true, runValidators: true }
+      ).select('-password');
+
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      return user;
+    } catch (error) {
+      console.error(
+        `更新用户状态错误 (ID: ${userId}, 状态: ${status}):`,
+        error
+      );
+      throw new AppError(
+        error.message || '更新用户状态失败',
+        error.statusCode || 500
+      );
     }
-
-    const user = await User.findOneAndUpdate(
-      { customId: userId },
-      { status },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!user) {
-      throw new AppError('用户不存在', 404);
-    }
-
-    return user;
   }
 
+
+  
+
   async updateUserRole(userId, role) {
-    if (!['admin', 'parent', 'teacher'].includes(role)) {
-      throw new AppError('无效的角色值', 400);
+    try {
+      if (!['admin', 'parent', 'teacher'].includes(role)) {
+        throw new AppError('无效的角色值', 400);
+      }
+
+      // 获取当前用户数据
+      const currentUser = await User.findOne({ customId: userId });
+      if (!currentUser) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      // 生成新的customId（保留时间戳部分）
+      const newCustomId = `${role.toUpperCase()}_${
+        currentUser.customId.split('_')[1]
+      }`;
+
+      // 同时更新角色和customId
+      const user = await User.findOneAndUpdate(
+        { customId: userId },
+        {
+          role,
+          customId: newCustomId, // 新增字段更新
+        },
+        { new: true, runValidators: true }
+      ).select('-password');
+
+      if (!user) {
+        throw new AppError('用户不存在', 404);
+      }
+
+      return user;
+    } catch (error) {
+      console.error(`更新用户角色错误 (ID: ${userId}, 角色: ${role}):`, error);
+      throw new AppError(
+        error.message || '更新用户角色失败',
+        error.statusCode || 500
+      );
     }
+  }
 
-    // 获取当前用户数据
-    const currentUser = await User.findOne({ customId: userId });
-    if (!currentUser) {
-      throw new AppError('用户不存在', 404);
+
+
+  // 根据指定的页码和每页数量获取用户数据
+  async getUsersByLimit(page = 1, limit = 10, filters = {}) {
+    try {
+      // 构建查询条件
+      const query = {};
+      const { role, status, search, sortBy = 'createdAt', sortOrder = 'desc' } = filters;
+      
+      if (role) query.role = role;
+      if (status) query.status = status;
+      if (search) {
+        query.$or = [
+          { username: { $regex: search, $options: 'i' } },
+          { customId: { $regex: search, $options: 'i' } },
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      // 计算跳过的文档数
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      
+      // 构建排序对象
+      const sort = {};
+      sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+      // 使用投影排除敏感字段
+      const projection = {
+        password: 0,
+        __v: 0
+      };
+
+      // 并行执行查询和计数，提高性能
+      const [users, total] = await Promise.all([
+        User.find(query)
+          .select(projection)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .sort(sort)
+          .lean(),
+        User.countDocuments(query)
+      ]);
+
+      // 返回用户数据和分页信息
+      return {
+        users,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      };
+    } catch (error) {
+      console.error('根据限制获取用户列表错误:', error);
+      throw new AppError('获取用户列表失败', 500);
     }
-
-    // 生成新的customId（保留时间戳部分）
-    const newCustomId = `${role.toUpperCase()}_${
-      currentUser.customId.split('_')[1]
-    }`;
-
-    // 同时更新角色和customId
-    const user = await User.findOneAndUpdate(
-      { customId: userId },
-      {
-        role,
-        customId: newCustomId, // 新增字段更新
-      },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    return user;
   }
 
   // 教师管理
@@ -221,65 +406,178 @@ class AdminService {
   }
 
   // 根据城市名称获取教师
-async getTutorsByCity(cityName, queryParams = {}) {
-  try {
-    const { page = 1, limit = 10, status, isVerified } = queryParams;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    // 构建查询条件
-    const query = { 'location.city': cityName };
-    
-    // 添加可选的筛选条件
-    if (status) query.status = status;
-    if (isVerified !== undefined) query.isVerified = isVerified === 'true';
-    
-    // 执行查询
-    const tutors = await TutorProfile.find(query)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
-      
-    // 获取总数
-    const total = await TutorProfile.countDocuments(query);
-    
-    return {
-      tutors,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / parseInt(limit))
-      }
-    };
-  } catch (error) {
-    throw new AppError(`获取城市 ${cityName} 的教师失败: ${error.message}`, 500);
+  async getTutorsByCity(cityName, queryParams = {}) {
+    try {
+      const { page = 1, limit = 10, status, isVerified } = queryParams;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      // 构建查询条件
+      const query = { 'location.city': cityName };
+
+      // 添加可选的筛选条件
+      if (status) query.status = status;
+      if (isVerified !== undefined) query.isVerified = isVerified === 'true';
+
+      // 执行查询
+      const tutors = await TutorProfile.find(query)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .sort({ createdAt: -1 });
+
+      // 获取总数
+      const total = await TutorProfile.countDocuments(query);
+
+      return {
+        tutors,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit)),
+        },
+      };
+    } catch (error) {
+      throw new AppError(
+        `获取城市 ${cityName} 的教师失败: ${error.message}`,
+        500
+      );
+    }
   }
-}
+
+  // 根据指定的页码和每页数量获取教师数据
+  async getTutorsByLimit(page = 1, limit = 10, filters = {}) {
+    try {
+      // 构建查询条件
+      const query = {};
+      const { 
+        status, 
+        isVerified, 
+        city, 
+        district, 
+        subject, 
+        search, 
+        sortBy = 'createdAt', 
+        sortOrder = 'desc' 
+      } = filters;
+      
+      // 根据状态筛选
+      if (status) query.status = status;
+      
+      // 根据验证状态筛选
+      if (isVerified !== undefined) {
+        query.isVerified = isVerified === 'true' || isVerified === true;
+      }
+      
+      // 根据城市筛选
+      if (city) {
+        query['location.city'] = city;
+      }
+      
+      // 根据区域筛选
+      if (district) {
+        query['location.district'] = district;
+      }
+      
+      // 根据科目筛选
+      if (subject) {
+        query['subjects.name'] = subject;
+      }
+      
+      // 搜索功能
+      if (search) {
+        query.$or = [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { tutorId: { $regex: search, $options: 'i' } },
+          { 'subjects.name': { $regex: search, $options: 'i' } },
+          { 'location.city': { $regex: search, $options: 'i' } },
+          { 'location.district': { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      // 计算跳过的文档数
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      
+      // 构建排序对象
+      const sort = {};
+      sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+      // 并行执行查询和计数，提高性能
+      const [tutors, total] = await Promise.all([
+        TutorProfile.find(query)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .sort(sort)
+          .lean(),
+        TutorProfile.countDocuments(query)
+      ]);
+
+      // 返回教师数据和分页信息
+      return {
+        tutors,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      };
+    } catch (error) {
+      console.error('根据限制获取教师列表错误:', error);
+      throw new AppError('获取教师列表失败', 500);
+    }
+  }
 
   // 内容审核
   async getAllPosts(queryParams) {
-    const { page = 1, limit = 10, status, type, search } = queryParams;
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      search,
+      sort = 'createdAt',
+    } = queryParams;
     const skip = (page - 1) * limit;
 
     // 构建查询条件
     const query = {};
     if (status) query.status = status;
-    if (type) query.type = type;
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
+        { 'location.city': { $regex: search, $options: 'i' } },
+        { 'location.district': { $regex: search, $options: 'i' } },
+        { 'subjects.name': { $regex: search, $options: 'i' } },
       ];
     }
 
-    // 执行查询
+    // 构建排序条件
+    let sortOption = {};
+    switch (sort) {
+      case 'createdAt':
+        sortOption = { createdAt: -1 };
+        break;
+      case 'grade':
+        sortOption = { grade: 1 };
+        break;
+      case 'status':
+        sortOption = { status: 1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    // 执行查询 - 确保返回requestId字段用于后续操作
     const posts = await TutoringRequest.find(query)
       .skip(skip)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .sort(sortOption)
+      .select(
+        'requestId status grade subjects location preferences parentId createdAt reviewedAt'
+      ); // 确保包含requestId
 
     const total = await TutoringRequest.countDocuments(query);
 
+    // 注意：系统中所有对TutoringRequest的操作都应使用requestId而非_id
     return {
       posts,
       pagination: {
@@ -289,6 +587,56 @@ async getTutorsByCity(cityName, queryParams = {}) {
         pages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getAllPostsWithoutPagination(queryParams) {
+    try {
+      const { status, search, sort = 'createdAt' } = queryParams;
+
+      // 构建查询条件
+      const query = {};
+      if (status) query.status = status;
+      if (search) {
+        query.$or = [
+          { 'location.city': { $regex: search, $options: 'i' } },
+          { 'location.district': { $regex: search, $options: 'i' } },
+          { 'subjects.name': { $regex: search, $options: 'i' } },
+        ];
+      }
+
+      // 构建排序条件
+      let sortOption = {};
+      switch (sort) {
+        case 'createdAt':
+          sortOption = { createdAt: -1 };
+          break;
+        case 'grade':
+          sortOption = { grade: 1 };
+          break;
+        case 'status':
+          sortOption = { status: 1 };
+          break;
+        default:
+          sortOption = { createdAt: -1 };
+      }
+
+      // 执行查询 - 不使用 skip 和 limit，获取所有符合条件的帖子
+      const posts = await TutoringRequest.find(query)
+        .sort(sortOption)
+        .select(
+          'requestId status grade subjects location preferences parentId createdAt reviewedAt'
+        );
+
+      const total = posts.length;
+
+      return {
+        posts,
+        total,
+      };
+    } catch (error) {
+      console.error('获取所有帖子错误:', error);
+      throw new AppError('获取所有帖子失败', 500);
+    }
   }
 
   async getPostById(postId) {
@@ -312,42 +660,41 @@ async getTutorsByCity(cityName, queryParams = {}) {
     }
   }
 
+  //   // 根据城市名称获取帖子
+  // async getPostsByCity(cityName, queryParams = {}) {
+  //   try {
+  //     const { page = 1, limit = 10, status, grade } = queryParams;
+  //     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-//   // 根据城市名称获取帖子
-// async getPostsByCity(cityName, queryParams = {}) {
-//   try {
-//     const { page = 1, limit = 10, status, grade } = queryParams;
-//     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-//     // 构建查询条件
-//     const query = { 'location.city': cityName };
-    
-//     // 添加可选的筛选条件
-//     if (status) query.status = status;
-//     if (grade) query.grade = grade;
-    
-//     // 执行查询
-//     const posts = await TutoringRequest.find(query)
-//       .skip(skip)
-//       .limit(parseInt(limit))
-//       .sort({ createdAt: -1 });
-      
-//     // 获取总数
-//     const total = await TutoringRequest.countDocuments(query);
-    
-//     return {
-//       posts,
-//       pagination: {
-//         total,
-//         page: parseInt(page),
-//         limit: parseInt(limit),
-//         pages: Math.ceil(total / parseInt(limit))
-//       }
-//     };
-//   } catch (error) {
-//     throw new AppError(`获取城市 ${cityName} 的帖子失败: ${error.message}`, 500);
-//   }
-// }
+  //     // 构建查询条件
+  //     const query = { 'location.city': cityName };
+
+  //     // 添加可选的筛选条件
+  //     if (status) query.status = status;
+  //     if (grade) query.grade = grade;
+
+  //     // 执行查询
+  //     const posts = await TutoringRequest.find(query)
+  //       .skip(skip)
+  //       .limit(parseInt(limit))
+  //       .sort({ createdAt: -1 });
+
+  //     // 获取总数
+  //     const total = await TutoringRequest.countDocuments(query);
+
+  //     return {
+  //       posts,
+  //       pagination: {
+  //         total,
+  //         page: parseInt(page),
+  //         limit: parseInt(limit),
+  //         pages: Math.ceil(total / parseInt(limit))
+  //       }
+  //     };
+  //   } catch (error) {
+  //     throw new AppError(`获取城市 ${cityName} 的帖子失败: ${error.message}`, 500);
+  //   }
+  // }
 
   async updatePostStatus(postId, status, userId) {
     if (!['published', 'pending', 'rejected'].includes(status)) {
@@ -372,7 +719,8 @@ async getTutorsByCity(cityName, queryParams = {}) {
   }
 
   async deletePost(postId) {
-    const post = await TutoringRequest.findByIdAndDelete(postId);
+    // 修改为使用requestId字段查找，而不是_id
+    const post = await TutoringRequest.findOneAndDelete({ requestId: postId });
 
     if (!post) {
       throw new AppError('帖子不存在', 404);

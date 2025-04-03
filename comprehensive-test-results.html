@@ -1,0 +1,195 @@
+
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>智能家教推荐系统综合测试报告</title>
+    <meta charset="UTF-8">
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      h1, h2, h3 { color: #333; }
+      table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background-color: #f2f2f2; }
+      tr:nth-child(even) { background-color: #f9f9f9; }
+      .success { color: green; }
+      .failure { color: red; }
+      .chart-container { width: 80%; margin: 20px auto; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <h1>智能家教推荐系统综合测试报告</h1>
+    <p>测试时间: 2025/3/26 18:09:31</p>
+    <p>测试配置: 100 次请求, 100 并发</p>
+    
+    <h2>1. 时间特性测试</h2>
+    <table>
+      <tr>
+        <th>API端点</th>
+        <th>平均响应时间 (ms)</th>
+        <th>最小响应时间 (ms)</th>
+        <th>最大响应时间 (ms)</th>
+        <th>中位数响应时间 (ms)</th>
+        <th>95%响应时间 (ms)</th>
+      </tr>
+      
+      <tr>
+        <td>用户注册</td>
+        <td>276.68</td>
+        <td>276.68</td>
+        <td>276.68</td>
+        <td>276.68</td>
+        <td>276.68</td>
+      </tr>
+      
+      <tr>
+        <td>用户登录</td>
+        <td>278.82</td>
+        <td>259.41</td>
+        <td>297.96</td>
+        <td>279.54</td>
+        <td>297.96</td>
+      </tr>
+      
+    </table>
+    
+    <div class="chart-container">
+      <canvas id="timeChart"></canvas>
+    </div>
+    
+    <h2>2. 功能测试</h2>
+    <table>
+      <tr>
+        <th>测试用例</th>
+        <th>结果</th>
+        <th>详情</th>
+      </tr>
+      
+      <tr>
+        <td>用户注册</td>
+        <td class="success">成功</td>
+        <td>用户注册功能正常</td>
+      </tr>
+      
+      <tr>
+        <td>用户登录</td>
+        <td class="failure">失败</td>
+        <td>登录成功但未返回token</td>
+      </tr>
+      
+    </table>
+    
+    <h2>3. 可靠性和稳定性测试</h2>
+    <table>
+      <tr>
+        <th>测试用例</th>
+        <th>结果</th>
+        <th>详情</th>
+      </tr>
+      
+      <tr>
+        <td>错误处理</td>
+        <td class="failure">失败</td>
+        <td>系统正确处理了不存在的资源</td>
+      </tr>
+      
+    </table>
+    
+    <h2>4. 并发度测试</h2>
+    <table>
+      <tr>
+        <th>API端点</th>
+        <th>成功率</th>
+        <th>平均响应时间 (ms)</th>
+        <th>最大响应时间 (ms)</th>
+        <th>95%响应时间 (ms)</th>
+      </tr>
+      
+      <tr>
+        <td>获取家长资料</td>
+        <td>0%</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+      
+      <tr>
+        <td>获取子女信息</td>
+        <td>0%</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+      
+      <tr>
+        <td>获取家教需求</td>
+        <td>0%</td>
+        <td>0</td>
+        <td>0</td>
+        <td>0</td>
+      </tr>
+      
+    </table>
+    
+    <h2>5. 安全性测试</h2>
+    <table>
+      <tr>
+        <th>测试用例</th>
+        <th>结果</th>
+        <th>详情</th>
+      </tr>
+      
+      <tr>
+        <td>未授权访问保护</td>
+        <td class="failure">不通过</td>
+        <td>系统正确拒绝了未授权访问</td>
+      </tr>
+      
+      <tr>
+        <td>密码强度要求</td>
+        <td class="failure">不通过</td>
+        <td>系统正确拒绝了弱密码</td>
+      </tr>
+      
+      <tr>
+        <td>SQL注入防护</td>
+        <td class="failure">不通过</td>
+        <td>系统正确处理了SQL注入尝试</td>
+      </tr>
+      
+    </table>
+    
+    <script>
+      // 时间特性图表
+      const timeLabels = ["用户注册","用户登录"];
+      const timeData = [276.68,278.82];
+      
+      new Chart(document.getElementById('timeChart'), {
+        type: 'bar',
+        data: {
+          labels: timeLabels,
+          datasets: [{
+            label: '平均响应时间 (ms)',
+            data: timeData,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '毫秒'
+              }
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+  </html>
+  

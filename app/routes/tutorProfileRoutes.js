@@ -123,6 +123,13 @@ router.patch(
   TutorProfileController.updateTeachingStyle
 );
 
+// 新增推荐接口
+router.get(
+  '/profile/recommended-requests',
+  checkRole('teacher'),
+  TutorProfileController.getRecommendedRequests
+);
+
 module.exports = router; // 新增城市需求接口
 router.get(
   '/profile/city-requests',

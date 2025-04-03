@@ -722,6 +722,7 @@ class TutorProfileController {
       next(error);
     }
   }
+
   static async getCityTutoringRequestsWithFilters(req, res, next) {
     try {
       const { user } = req;
@@ -757,6 +758,28 @@ class TutorProfileController {
         data: {
           requests: result.requests,
           pagination: result.pagination,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getRecommendedRequests(req, res, next) {
+    try {
+      const { user } = req;
+      const limit = parseInt(req.query.limit) || 3;
+
+      const TutorRecommendationService = require('../services/TutorRecommendationService');
+      const recommendedRequests = await TutorRecommendationService.getRecommendedRequests(
+        user.customId,
+        limit
+      );
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          recommendations: recommendedRequests,
         },
       });
     } catch (error) {

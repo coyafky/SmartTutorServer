@@ -20,17 +20,31 @@ class TutoringRequestService {
       throw new AppError('家长不存在', 404);
     }
 
+    // 如果状态为"open"，修改为"published"
+    if (requestData.status === 'open') {
+      log.info(`将请求状态从 "open" 修改为 "published"`);
+      requestData.status = 'published';
+      // 添加自定义字段记录原始状态
+      requestData.customStatus = 'open';
+    }
+
     // 验证 childId 是否属于该家长（如果提供了 childId）
     if (requestData.childId) {
-      const childExists = parent.children.some(child => child.childId === requestData.childId);
+      const childExists = parent.children.some(
+        (child) => child.childId === requestData.childId
+      );
       if (!childExists) {
-        log.warn(`创建帖子失败: 子女ID ${requestData.childId} 不属于家长 ${parentId}`);
+        log.warn(
+          `创建帖子失败: 子女ID ${requestData.childId} 不属于家长 ${parentId}`
+        );
         throw new AppError('指定的子女不属于您', 400);
       }
     } else if (parent.children && parent.children.length > 0) {
       // 如果未指定子女ID且家长有子女，使用第一个子女ID
       requestData.childId = parent.children[0].childId;
-      log.info(`未指定子女ID，默认使用家长的第一个子女: ${requestData.childId}`);
+      log.info(
+        `未指定子女ID，默认使用家长的第一个子女: ${requestData.childId}`
+      );
     } else {
       log.warn(`创建帖子失败: 家长 ${parentId} 没有子女信息，且未指定子女ID`);
       throw new AppError('请先添加子女信息或指定有效的子女ID', 400);
@@ -43,7 +57,7 @@ class TutoringRequestService {
 
       // 查询该家长的帖子数量，用于生成序列号
       const requestCount = await TutoringRequest.countDocuments({
-        parentId: parentId,  // 使用字符串ID而不是ObjectId
+        parentId: parentId, // 使用字符串ID而不是ObjectId
       });
       const sequenceNumber = (requestCount + 1).toString().padStart(2, '0');
 
@@ -52,7 +66,7 @@ class TutoringRequestService {
 
       // 创建帖子 - 使用字符串ID而不是ObjectId
       const request = await TutoringRequest.create({
-        parentId: parentId,  // 使用字符串ID
+        parentId: parentId, // 使用字符串ID
         requestId,
         ...requestData,
       });
@@ -179,25 +193,25 @@ class TutoringRequestService {
    */
   static async getRequestsByParentId(parentId, options = {}) {
     log.info(`获取家长 ${parentId} 的家教需求帖子`);
-    
+
     // 构建查询条件
     const query = { parentId: parentId };
-    
+
     // 如果指定了子女ID，添加到查询条件
     if (options.childId) {
       query.childId = options.childId;
     }
-    
+
     // 如果指定了状态，添加到查询条件
     if (options.status) {
       query.status = options.status;
     }
-    
+
     // 处理分页
     const page = parseInt(options.page) || 1;
     const limit = parseInt(options.limit) || 10;
     const skip = (page - 1) * limit;
-    
+
     try {
       // 执行查询
       const [requests, total] = await Promise.all([
@@ -207,9 +221,9 @@ class TutoringRequestService {
           .limit(limit),
         TutoringRequest.countDocuments(query),
       ]);
-      
+
       log.info(`找到 ${requests.length} 条家长 ${parentId} 的帖子`);
-      
+
       return {
         requests,
         total,
@@ -235,11 +249,11 @@ class TutoringRequestService {
     if (filters.parentId) {
       query.parentId = filters.parentId;
     }
-    
+
     if (filters.childId) {
       query.childId = filters.childId;
     }
-    
+
     if (filters.grade) {
       query.grade = filters.grade;
     }

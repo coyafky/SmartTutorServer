@@ -1,0 +1,87 @@
+{
+  "testTime": "2025/3/26 18:09:31",
+  "configuration": {
+    "iterations": 100,
+    "concurrency": 100,
+    "timeout": 10000
+  },
+  "results": {
+    "timePerformance": {
+      "用户注册": {
+        "avg": 276.68,
+        "min": 276.68,
+        "max": 276.68,
+        "median": 276.68,
+        "p95": 276.68
+      },
+      "用户登录": {
+        "avg": 278.82,
+        "min": 259.41,
+        "max": 297.96,
+        "median": 279.54,
+        "p95": 297.96
+      }
+    },
+    "functionalTests": {
+      "用户注册": {
+        "success": true,
+        "message": "用户注册功能正常"
+      },
+      "用户登录": {
+        "message": "登录成功但未返回token"
+      }
+    },
+    "reliabilityTests": {
+      "错误处理": {
+        "success": false,
+        "message": "系统正确处理了不存在的资源"
+      }
+    },
+    "concurrencyTests": {
+      "获取家长资料": {
+        "successRate": 0,
+        "stats": {
+          "avg": 0,
+          "min": 0,
+          "max": 0,
+          "median": 0,
+          "p95": 0
+        }
+      },
+      "获取子女信息": {
+        "successRate": 0,
+        "stats": {
+          "avg": 0,
+          "min": 0,
+          "max": 0,
+          "median": 0,
+          "p95": 0
+        }
+      },
+      "获取家教需求": {
+        "successRate": 0,
+        "stats": {
+          "avg": 0,
+          "min": 0,
+          "max": 0,
+          "median": 0,
+          "p95": 0
+        }
+      }
+    },
+    "securityTests": {
+      "未授权访问保护": {
+        "success": false,
+        "message": "系统正确拒绝了未授权访问"
+      },
+      "密码强度要求": {
+        "success": false,
+        "message": "系统正确拒绝了弱密码"
+      },
+      "SQL注入防护": {
+        "success": false,
+        "message": "系统正确处理了SQL注入尝试"
+      }
+    }
+  }
+}

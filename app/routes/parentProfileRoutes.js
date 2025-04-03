@@ -81,7 +81,6 @@ router.get(
 // 按科目筛选教师
 router.get(
   '/:parentId/tutors/subject',
-  authenticateToken,
   ParentProfileController.getTutorsBySubject
 );
 
@@ -118,6 +117,20 @@ router.get(
   '/:parentId/tutors/filter',
   authenticateToken,
   ParentProfileController.getTutorsByMultipleConditions
+);
+
+// 多条件筛选教师（POST版本，支持请求体中的复杂条件）
+router.post(
+  '/:parentId/tutors/advanced-filter',
+  authenticateToken,
+  ParentProfileController.getTutorsByAdvancedFilter
+);
+
+// 获取推荐教师
+router.get(
+  '/:parentId/tutors/recommended',
+  authenticateToken,
+  ParentProfileController.getRecommendedTutors
 );
 
 // 按科目和价格区间筛选教师

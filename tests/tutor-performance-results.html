@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>教师路由性能测试报告</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2 {
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #eee;
+    }
+    .chart-container {
+      margin: 30px 0;
+      height: 400px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f8f8f8;
+      font-weight: bold;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    .section {
+      margin-bottom: 40px;
+    }
+    .summary {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>教师路由性能测试报告</h1>
+    
+    <div class="summary">
+      <p><strong>测试配置:</strong> 30 次请求, 5 并发, 5000ms 超时</p>
+      <p><strong>测试时间:</strong> 2025/3/26 17:49:53</p>
+    </div>
+    
+    <div class="section">
+      <h2>公共API端点性能</h2>
+      <div class="chart-container">
+        <canvas id="publicChart"></canvas>
+      </div>
+      
+      <table>
+        <tr>
+          <th>端点</th>
+          <th>成功率</th>
+          <th>平均响应时间</th>
+          <th>最小响应时间</th>
+          <th>最大响应时间</th>
+          <th>中位数响应时间</th>
+          <th>95%响应时间</th>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/tutors</td>
+          <td>100.00%</td>
+          <td>18.58ms</td>
+          <td>5.33ms</td>
+          <td>44.85ms</td>
+          <td>10.62ms</td>
+          <td>44.49ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/tutors/subject/数学</td>
+          <td>100.00%</td>
+          <td>10.17ms</td>
+          <td>4.58ms</td>
+          <td>20.51ms</td>
+          <td>9.10ms</td>
+          <td>19.48ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/tutors/location/北京/海淀区</td>
+          <td>100.00%</td>
+          <td>8.34ms</td>
+          <td>4.40ms</td>
+          <td>13.19ms</td>
+          <td>7.89ms</td>
+          <td>13.03ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/tutors/nearby?longitude=116.3&latitude=39.9&distance=5</td>
+          <td>0%</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+        </tr>
+        
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>需要认证的API端点性能</h2>
+      <div class="chart-container">
+        <canvas id="authChart"></canvas>
+      </div>
+      
+      <table>
+        <tr>
+          <th>端点</th>
+          <th>成功率</th>
+          <th>平均响应时间</th>
+          <th>最小响应时间</th>
+          <th>最大响应时间</th>
+          <th>中位数响应时间</th>
+          <th>95%响应时间</th>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile</td>
+          <td>100.00%</td>
+          <td>8.71ms</td>
+          <td>1.66ms</td>
+          <td>22.42ms</td>
+          <td>7.10ms</td>
+          <td>21.10ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/availability</td>
+          <td>0%</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/status</td>
+          <td>0%</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/subjects</td>
+          <td>0%</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+          <td>N/A</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/location</td>
+          <td>100.00%</td>
+          <td>8.02ms</td>
+          <td>3.01ms</td>
+          <td>13.91ms</td>
+          <td>8.29ms</td>
+          <td>13.27ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/pricing</td>
+          <td>100.00%</td>
+          <td>7.05ms</td>
+          <td>4.16ms</td>
+          <td>16.07ms</td>
+          <td>6.14ms</td>
+          <td>11.88ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/teaching-style</td>
+          <td>100.00%</td>
+          <td>7.44ms</td>
+          <td>3.99ms</td>
+          <td>17.81ms</td>
+          <td>6.04ms</td>
+          <td>17.74ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/default-times</td>
+          <td>86.67%</td>
+          <td>11.99ms</td>
+          <td>3.36ms</td>
+          <td>19.39ms</td>
+          <td>12.39ms</td>
+          <td>19.09ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/city-requests</td>
+          <td>100.00%</td>
+          <td>14.77ms</td>
+          <td>6.68ms</td>
+          <td>21.42ms</td>
+          <td>14.90ms</td>
+          <td>20.72ms</td>
+        </tr>
+        
+        <tr>
+          <td>/tutorProfiles/profile/city-requests/filters</td>
+          <td>100.00%</td>
+          <td>12.82ms</td>
+          <td>7.51ms</td>
+          <td>19.82ms</td>
+          <td>12.66ms</td>
+          <td>19.00ms</td>
+        </tr>
+        
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    // 公共API图表
+    const publicCtx = document.getElementById('publicChart').getContext('2d');
+    new Chart(publicCtx, {
+      type: 'bar',
+      data: {
+        labels: ["/tutorProfiles/tutors","/tutorProfiles/tutors/subject/数学","/tutorProfiles/tutors/location/北京/海淀区","/tutorProfiles/tutors/nearby?longitude=116.3&latitude=39.9&distance=5"],
+        datasets: [
+          {
+            label: '平均响应时间 (ms)',
+            data: [18.58,10.17,8.34,0],
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          },
+          {
+            label: '95%响应时间 (ms)',
+            data: [44.49,19.48,13.03,0],
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: '响应时间 (ms)'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'API端点'
+            }
+          }
+        }
+      }
+    });
+    
+    // 认证API图表
+    const authCtx = document.getElementById('authChart').getContext('2d');
+    new Chart(authCtx, {
+      type: 'bar',
+      data: {
+        labels: ["/tutorProfiles/profile","/tutorProfiles/profile/availability","/tutorProfiles/profile/status","/tutorProfiles/profile/subjects","/tutorProfiles/profile/location","/tutorProfiles/profile/pricing","/tutorProfiles/profile/teaching-style","/tutorProfiles/profile/default-times","/tutorProfiles/profile/city-requests","/tutorProfiles/profile/city-requests/filters"],
+        datasets: [
+          {
+            label: '平均响应时间 (ms)',
+            data: [8.71,0,0,0,8.02,7.05,7.44,11.99,14.77,12.82],
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          },
+          {
+            label: '95%响应时间 (ms)',
+            data: [21.1,0,0,0,13.27,11.88,17.74,19.09,20.72,19],
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: '响应时间 (ms)'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'API端点'
+            }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+  

@@ -1,0 +1,21 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 50
+      name: 'Warm up phase'
+    - duration: 120
+      arrivalRate: 50
+      name: 'Sustained load'
+scenarios:
+  - name: 'API测试'
+    flow:
+      - get:
+          url: '/api/tutors'
+      - get:
+          url: '/api/tutoring-requests'
+      - get:
+          url: '/api/parents'
+      - get:
+          url: '/api/matches'

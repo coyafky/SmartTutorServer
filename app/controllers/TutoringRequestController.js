@@ -15,6 +15,14 @@ class TutoringRequestController {
       const parentId = req.params.parentId || req.user.customId;
       const requestData = req.body;
 
+      // 如果状态为"open"，修改为"published"
+      if (requestData.status === 'open') {
+        console.log('将请求状态从 "open" 修改为 "published"');
+        requestData.status = 'published';
+        // 添加自定义字段记录原始状态
+        requestData.customStatus = 'open';
+      }
+
       // 验证必填字段
       if (!requestData.grade) {
         throw new AppError('年级是必填项', 400);
@@ -23,30 +31,36 @@ class TutoringRequestController {
       if (!requestData.location) {
         throw new AppError('上课地点信息是必填项', 400);
       }
-      
+
       // 处理地理位置坐标格式
       if (requestData.location) {
         // 如果使用旧格式（latitude 和 longitude 分开）
-        if (requestData.location.coordinates && 
-            (requestData.location.coordinates.latitude !== undefined && 
-             requestData.location.coordinates.longitude !== undefined)) {
-          
+        if (
+          requestData.location.coordinates &&
+          requestData.location.coordinates.latitude !== undefined &&
+          requestData.location.coordinates.longitude !== undefined
+        ) {
           const lat = parseFloat(requestData.location.coordinates.latitude);
           const lng = parseFloat(requestData.location.coordinates.longitude);
-          
+
           // 转换为 GeoJSON 格式
           requestData.location.coordinates = {
             type: 'Point',
-            coordinates: [lng, lat] // MongoDB GeoJSON 要求经度在前，纬度在后
+            coordinates: [lng, lat], // MongoDB GeoJSON 要求经度在前，纬度在后
           };
-          
-          log.info('坐标格式已转换为 GeoJSON 格式:', requestData.location.coordinates);
-        } 
+
+          log.info(
+            '坐标格式已转换为 GeoJSON 格式:',
+            requestData.location.coordinates
+          );
+        }
         // 如果已经是 GeoJSON 格式但 coordinates 为空
-        else if (requestData.location.coordinates && 
-                 requestData.location.coordinates.type === 'Point' && 
-                 (!requestData.location.coordinates.coordinates || 
-                  requestData.location.coordinates.coordinates.length === 0)) {
+        else if (
+          requestData.location.coordinates &&
+          requestData.location.coordinates.type === 'Point' &&
+          (!requestData.location.coordinates.coordinates ||
+            requestData.location.coordinates.coordinates.length === 0)
+        ) {
           throw new AppError('坐标数据不完整，请提供经纬度值', 400);
         }
       }
@@ -54,9 +68,12 @@ class TutoringRequestController {
       if (!requestData.preferences) {
         throw new AppError('教学偏好是必填项', 400);
       }
-      
+
       // 确保 status 字段值有效
-      if (requestData.status && !['open', 'closed', 'archived'].includes(requestData.status)) {
+      if (
+        requestData.status &&
+        !['open', 'closed', 'archived'].includes(requestData.status)
+      ) {
         requestData.status = 'open'; // 设置默认值
       }
 
@@ -69,14 +86,18 @@ class TutoringRequestController {
       // 验证或设置 childId
       if (requestData.childId) {
         // 验证指定的子女ID是否属于该家长
-        const childExists = parent.children.some(child => child.childId === requestData.childId);
+        const childExists = parent.children.some(
+          (child) => child.childId === requestData.childId
+        );
         if (!childExists) {
           throw new AppError('指定的子女不属于您', 400);
         }
       } else if (parent.children && parent.children.length > 0) {
         // 如果未指定子女ID，使用第一个子女
         requestData.childId = parent.children[0].childId;
-        log.info(`未指定子女ID，默认使用家长的第一个子女: ${requestData.childId}`);
+        log.info(
+          `未指定子女ID，默认使用家长的第一个子女: ${requestData.childId}`
+        );
       } else {
         throw new AppError('请先添加子女信息或指定有效的子女ID', 400);
       }
@@ -84,13 +105,16 @@ class TutoringRequestController {
       // 确保使用字符串形式的 parentId
       requestData.parentId = parentId;
 
-      const request = await TutoringRequestService.createRequest(parentId, requestData);
+      const request = await TutoringRequestService.createRequest(
+        parentId,
+        requestData
+      );
 
       res.status(201).json({
         status: 'success',
         data: {
-          request
-        }
+          request,
+        },
       });
     } catch (error) {
       next(error);
@@ -111,8 +135,8 @@ class TutoringRequestController {
       res.status(200).json({
         status: 'success',
         data: {
-          request
-        }
+          request,
+        },
       });
     } catch (error) {
       next(error);
@@ -140,8 +164,8 @@ class TutoringRequestController {
       res.status(200).json({
         status: 'success',
         data: {
-          request
-        }
+          request,
+        },
       });
     } catch (error) {
       next(error);
@@ -163,7 +187,7 @@ class TutoringRequestController {
 
       res.status(200).json({
         status: 'success',
-        data: null
+        data: null,
       });
     } catch (error) {
       next(error);
@@ -180,10 +204,12 @@ class TutoringRequestController {
     try {
       const filters = {
         grade: req.query.grade,
-        subjects: req.query.subjects ? req.query.subjects.split(',') : undefined,
+        subjects: req.query.subjects
+          ? req.query.subjects.split(',')
+          : undefined,
         city: req.query.city,
         district: req.query.district,
-        status: req.query.status
+        status: req.query.status,
       };
 
       // 处理地理位置查询
@@ -191,20 +217,25 @@ class TutoringRequestController {
         filters.nearLocation = {
           latitude: parseFloat(req.query.latitude),
           longitude: parseFloat(req.query.longitude),
-          maxDistance: req.query.maxDistance ? parseInt(req.query.maxDistance) : undefined
+          maxDistance: req.query.maxDistance
+            ? parseInt(req.query.maxDistance)
+            : undefined,
         };
       }
 
       const options = {
         page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10
+        limit: parseInt(req.query.limit) || 10,
       };
 
-      const result = await TutoringRequestService.queryRequests(filters, options);
+      const result = await TutoringRequestService.queryRequests(
+        filters,
+        options
+      );
 
       res.status(200).json({
         status: 'success',
-        data: result
+        data: result,
       });
     } catch (error) {
       next(error);
@@ -231,24 +262,29 @@ class TutoringRequestController {
 
       // 构建选项
       const options = { page, limit };
-      
+
       // 如果提供了 childId，则添加到选项中
       if (childId) {
         // 验证该子女是否属于该家长
-        const childExists = parent.children.some(child => child.childId === childId);
+        const childExists = parent.children.some(
+          (child) => child.childId === childId
+        );
         if (!childExists) {
           throw new AppError('指定的子女不属于您', 400);
         }
         options.childId = childId;
       }
-      
+
       // 如果提供了状态筛选
       if (status && ['open', 'closed', 'archived'].includes(status)) {
         options.status = status;
       }
 
       // 使用新的专用方法获取家长的帖子
-      const result = await TutoringRequestService.getRequestsByParentId(parentId, options);
+      const result = await TutoringRequestService.getRequestsByParentId(
+        parentId,
+        options
+      );
 
       res.status(200).json({
         status: 'success',
@@ -259,9 +295,9 @@ class TutoringRequestController {
             totalResults: result.total,
             totalPages: result.pages,
             currentPage: result.page,
-            limit: limit
-          }
-        }
+            limit: limit,
+          },
+        },
       });
     } catch (error) {
       next(error);
