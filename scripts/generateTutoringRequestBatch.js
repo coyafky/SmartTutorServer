@@ -51,8 +51,7 @@ const MONGO_URI = argv.uri;
 // 中国城市和区域数据
 const CHINESE_CITIES = [
   '北京', '上海', '广州', '深圳', '杭州', 
-  '成都', '武汉', '南京', '西安', '重庆',
-  '苏州', '天津', '长沙', '郑州', '青岛'
+  '成都', '武汉', '南京', '西安', 
 ];
 
 const DISTRICTS = {
@@ -65,12 +64,7 @@ const DISTRICTS = {
   武汉: ['江岸区', '江汉区', '硚口区', '汉阳区', '武昌区'],
   南京: ['玄武区', '秦淮区', '建邺区', '鼓楼区', '栖霞区'],
   西安: ['新城区', '碑林区', '莲湖区', '雁塔区', '未央区'],
-  重庆: ['渝中区', '江北区', '南岸区', '渝北区', '沙坪坝区'],
-  苏州: ['姑苏区', '虎丘区', '吴中区', '相城区', '吴江区'],
-  天津: ['和平区', '河东区', '河西区', '南开区', '河北区'],
-  长沙: ['岳麓区', '芙蓉区', '天心区', '开福区', '雨花区'],
-  郑州: ['金水区', '二七区', '中原区', '管城区', '惠济区'],
-  青岛: ['市南区', '市北区', '李沧区', '崂山区', '城阳区']
+ 
 };
 
 // 生成符合中国地理范围的坐标
@@ -85,12 +79,7 @@ function generateChinaCoordinates(city) {
     武汉: { lon: [114.2, 114.3], lat: [30.5, 30.6] },
     南京: { lon: [118.7, 118.8], lat: [32.0, 32.1] },
     西安: { lon: [108.9, 109.0], lat: [34.2, 34.3] },
-    重庆: { lon: [106.5, 106.6], lat: [29.5, 29.6] },
-    苏州: { lon: [120.5, 120.6], lat: [31.2, 31.3] },
-    天津: { lon: [117.1, 117.2], lat: [39.0, 39.1] },
-    长沙: { lon: [112.9, 113.0], lat: [28.1, 28.2] },
-    郑州: { lon: [113.6, 113.7], lat: [34.7, 34.8] },
-    青岛: { lon: [120.3, 120.4], lat: [36.0, 36.1] }
+    
   };
 
   const range = cityRanges[city] || { lon: [112, 123], lat: [20, 40] };
@@ -102,7 +91,7 @@ function generateChinaCoordinates(city) {
 
 // 生成科目信息
 function generateSubjects() {
-  const subjects = ['数学', '语文', '英语', '物理', '化学', '生物', '历史', '地理', '政治', '信息技术'];
+  const subjects = ['数学', '语文', '英语', '物理', '化学', '生物', '历史', '地理', '政治'];
   const selectedSubjects = faker.helpers.arrayElements(subjects, {
     min: 1,
     max: 3,
@@ -218,12 +207,12 @@ async function generateTutoringRequest(parent, existingIds = new Set()) {
   };
 }
 
-// 清空现有数据
-async function clearExistingData() {
-  console.log('正在清空现有家教请求数据...');
-  const result = await TutoringRequest.deleteMany({});
-  console.log(`已删除 ${result.deletedCount} 条家教请求记录`);
-}
+// // 清空现有数据
+// async function clearExistingData() {
+//   console.log('正在清空现有家教请求数据...');
+//   const result = await TutoringRequest.deleteMany({});
+//   console.log(`已删除 ${result.deletedCount} 条家教请求记录`);
+// }
 
 // 批量处理函数
 async function processBatch(parents, batchIndex, batchSize, totalRequests, maxPerParent) {
@@ -318,10 +307,10 @@ async function generateTutoringRequestsBatch() {
     await mongoose.connect(MONGO_URI);
     console.log('MongoDB 连接成功');
     
-    // 如果需要，清空现有数据
-    if (argv.clear) {
-      await clearExistingData();
-    }
+    // // 如果需要，清空现有数据
+    // if (argv.clear) {
+    //   await clearExistingData();
+    // }
     
     // 查找所有家长用户，并确保包含children字段
     const parents = await Parent.find().select('+children').lean();

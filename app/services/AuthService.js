@@ -61,6 +61,23 @@ class AuthService {
 
       log.info(`用户注册成功: ${username}, ID: ${customId}`);
 
+      // 如果是家长角色，自动创建家长档案
+      if (role === 'parent') {
+        try {
+          log.info(`正在为新用户 ${username} (家长) 创建档案`);
+          const ParentProfileService = require('./ParentProfileService');
+          await ParentProfileService.createProfile({
+            parentId: customId,
+            nickname: username, // 默认使用用户名作为昵称
+          });
+          log.info(`家长档案创建成功: ${customId}`);
+        } catch (profileError) {
+          log.error(`创建家长档案时发生错误: ${profileError.message}`, profileError);
+          // 注意：我们不在这里抛出异常，用户帐号仍然创建成功
+          // 我们仅记录错误，用户可以在后续登录后完成档案创建
+        }
+      }
+
       // 生成 JWT token
       const token = this.generateToken(user);
 

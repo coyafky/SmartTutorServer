@@ -130,16 +130,40 @@ router.get(
   TutorProfileController.getRecommendedRequests
 );
 
-module.exports = router; // 新增城市需求接口
+// 帖子查询相关接口
+// 获取同城市帖子
 router.get(
   '/profile/city-requests',
-
   checkRole('teacher'),
   TutorProfileController.getCityTutoringRequests
 );
+
+// 使用筛选条件获取帖子 (GET 与 POST 方法均支持)
 router.get(
   '/profile/city-requests/filters',
-
   checkRole('teacher'),
   TutorProfileController.getCityTutoringRequestsWithFilters
 );
+
+// 添加与POST方法兼容的路由，以支持更复杂的筛选条件
+router.post(
+  '/profile/city-requests/filters',
+  checkRole('teacher'),
+  TutorProfileController.getCityTutoringRequestsWithFilters
+);
+
+// 获取指定城市的帖子
+router.get(
+  '/profile/requests/city/:cityName',
+  checkRole('teacher'),
+  TutorProfileController.getRequestsByCity
+);
+
+// 获取单个帖子详情
+router.get(
+  '/profile/requests/:requestId',
+  checkRole('teacher'),
+  TutorProfileController.getTutoringRequestById
+);
+
+module.exports = router;

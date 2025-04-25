@@ -267,26 +267,21 @@ async function generateAdminUser() {
   }
 }
 
-// 清空用户集合的函数
+// 清空用户集合功能已移除
+// 为了避免意外删除用户数据，此脚本不再支持清除功能
 async function clearUsers() {
-  try {
-    // 保留管理员账户
-    const result = await User.deleteMany({ role: { $ne: 'admin' } });
-    console.log(`已清空 ${result.deletedCount} 个非管理员用户`);
-    return true;
-  } catch (error) {
-    console.error('清空用户集合时出错:', error.message);
-    return false;
-  }
+  console.log('警告: 清除用户数据功能已被移除，以保护现有数据');
+  console.log('如需清除数据，请使用MongoDB管理工具手动操作');
+  return false;
 }
 
 // 主函数
 async function main() {
   try {
-    // 询问是否清空现有用户
+    // 获取命令行参数
     const args = process.argv.slice(2);
     if (args.includes('--clear')) {
-      console.log('正在清空现有用户...');
+      console.log('警告: --clear 参数已不再支持');
       await clearUsers();
     }
 

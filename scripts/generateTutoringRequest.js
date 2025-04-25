@@ -219,12 +219,12 @@ async function generateTutoringRequest(parent, existingIds = new Set()) {
   };
 }
 
-// 清空现有数据
-async function clearExistingData() {
-  console.log('正在清空现有家教请求数据...');
-  const result = await TutoringRequest.deleteMany({});
-  console.log(`已删除 ${result.deletedCount} 条家教请求记录`);
-}
+// // 清空现有数据
+// async function clearExistingData() {
+//   console.log('正在清空现有家教请求数据...');
+//   const result = await TutoringRequest.deleteMany({});
+//   console.log(`已删除 ${result.deletedCount} 条家教请求记录`);
+// }
 
 // 批量处理函数
 async function processBatch(

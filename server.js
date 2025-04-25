@@ -35,18 +35,26 @@ const server = http.createServer(app);
  * 数据库连接
  * 使用环境变量中的 MongoDB URI 连接到数据库
  */
-connectDB(process.env.MONGODB_URI);
+connectDB();
 
 /**
  * 中间件配置
  */
-// 配置跨域资源共享 (CORS)，使用环境变量中的允许源
+// 配置跨域资源共享 (CORS)，允许所有来源访问
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN.split(','), // 将逗号分隔的字符串转换为数组
-    credentials: true, // 允许携带凭证（cookies等）
+    origin: '*', // 允许任何来源
+    credentials: false // 当使用 origin: '*' 时，credentials 必须为 false
   })
 );
+
+// 注意: 如果在生产环境需要携带凭证（cookies），请使用以下方式：
+// app.use(
+//   cors({
+//     origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5173'],
+//     credentials: true
+//   })
+// );
 
 // 服务器端口配置，优先使用环境变量中的端口，默认为3000
 const PORT = process.env.PORT || 3000;

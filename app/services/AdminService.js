@@ -3,6 +3,7 @@ const TutorProfile = require('../../models/TutorProfile');
 const TutoringRequest = require('../../models/TutoringRequest');
 const Settings = require('../../models/Settings');
 const Match = require('../../models/Match');
+const Parent = require('../../models/Parent');
 const { AppError } = require('../utils/errorHandler');
 
 // 用户管理服务
@@ -312,6 +313,221 @@ class AdminService {
     }
   }
 
+  // 家长管理
+  async getAllParents(queryParams) {
+    const { page = 1, limit = 10, status, search } = queryParams;
+    const skip = (page - 1) * limit;
+
+    // 构建查询条件
+    const query = {};
+    if (status) query.status = status;
+    if (search) {
+      query.$or = [
+        { 'nickname': { $regex: search, $options: 'i' } },
+        { 'parentId': { $regex: search, $options: 'i' } },
+        { 'location.city': { $regex: search, $options: 'i' } },
+        { 'location.district': { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    try {
+      // 并行执行查询和计数，提高性能
+      const [parents, total] = await Promise.all([
+        Parent.find(query)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .sort({ createdAt: -1 })
+          .lean(),
+        Parent.countDocuments(query)
+      ]);
+
+      return {
+        parents,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      };
+    } catch (error) {
+      console.error('获取家长列表错误:', error);
+      throw new AppError('获取家长列表失败', 500);
+    }
+  }
+
+  async getParentsByLimit(page = 1, limit = 10, filters = {}) {
+    try {
+      const skip = (page - 1) * limit;
+      
+      // 构建查询条件
+      const query = {};
+      if (filters.status) query.status = filters.status;
+      if (filters.city) query['location.city'] = filters.city;
+      if (filters.district) query['location.district'] = filters.district;
+      
+      // 处理搜索条件
+      if (filters.search) {
+        query.$or = [
+          { 'nickname': { $regex: filters.search, $options: 'i' } },
+          { 'parentId': { $regex: filters.search, $options: 'i' } },
+          { 'children.nickname': { $regex: filters.search, $options: 'i' } },
+          { 'children.grade': { $regex: filters.search, $options: 'i' } },
+        ];
+      }
+      
+      // 构建排序条件
+      let sort = { createdAt: -1 }; // 默认按创建时间降序
+      if (filters.sortBy) {
+        sort = { [filters.sortBy]: filters.sortOrder === 'desc' ? -1 : 1 };
+      }
+
+      // 并行执行查询和计数
+      const [parents, total] = await Promise.all([
+        Parent.find(query)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .sort(sort)
+          .lean(),
+        Parent.countDocuments(query)
+      ]);
+
+      // 返回家长数据和分页信息
+      return {
+        parents,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      };
+    } catch (error) {
+      console.error('根据限制获取家长列表错误:', error);
+      throw new AppError('获取家长列表失败', 500);
+    }
+  }
+
+  async getParentById(parentId) {
+    try {
+      const parent = await Parent.findOne({ parentId }).lean();
+      
+      if (!parent) {
+        throw new AppError('未找到该家长', 404);
+      }
+      
+      return parent;
+    } catch (error) {
+      console.error(`获取家长 ${parentId} 详情失败:`, error);
+      throw new AppError(error.message, error.statusCode || 500);
+    }
+  }
+
+  async getParentsByCity(cityName) {
+    try {
+      const parents = await Parent.find({ 'location.city': cityName }).lean();
+      return parents;
+    } catch (error) {
+      console.error(`获取${cityName}家长列表失败:`, error);
+      throw new AppError('获取家长列表失败', 500);
+    }
+  }
+
+  async updateParentStatus(parentId, status) {
+    try {
+      const parent = await Parent.findOne({ parentId });
+      
+      if (!parent) {
+        throw new AppError('未找到该家长', 404);
+      }
+      
+      parent.status = status;
+      await parent.save();
+      
+      return parent;
+    } catch (error) {
+      console.error(`更新家长 ${parentId} 状态失败:`, error);
+      throw new AppError(error.message, error.statusCode || 500);
+    }
+  }
+
+  async getParentStatistics() {
+    try {
+      // 家长总数
+      const totalParents = await Parent.countDocuments();
+      
+      // 按城市分组统计
+      const parentsByCity = await Parent.aggregate([
+        {
+          $group: {
+            _id: "$location.city",
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ]);
+      
+      // 按状态分组统计
+      const parentsByStatus = await Parent.aggregate([
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      // 孩子年级分布
+      const childrenByGrade = await Parent.aggregate([
+        { $unwind: "$children" },
+        {
+          $group: {
+            _id: "$children.grade",
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      
+      // 最近注册的家长数量趋势（按天）
+      const today = new Date();
+      const last30Days = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        return date;
+      }).reverse();
+      
+      const registrationTrend = await Promise.all(
+        last30Days.map(async (date) => {
+          const nextDay = new Date(date);
+          nextDay.setDate(date.getDate() + 1);
+          
+          const count = await Parent.countDocuments({
+            createdAt: { $gte: date, $lt: nextDay }
+          });
+          
+          return {
+            date: date.toISOString().split('T')[0],
+            count
+          };
+        })
+      );
+      
+      return {
+        totalParents,
+        parentsByCity,
+        parentsByStatus,
+        childrenByGrade,
+        registrationTrend
+      };
+    } catch (error) {
+      console.error('获取家长统计数据失败:', error);
+      throw new AppError('获取家长统计数据失败', 500);
+    }
+  }
+  
   // 教师管理
   async getAllTutors(queryParams) {
     const { page = 1, limit = 10, status, verified, search } = queryParams;
@@ -956,6 +1172,12 @@ class AdminService {
       pendingMatches,
       monthlyStats,
     };
+  }
+  async getRecentUsers(queryParams) {
+    const { page = 1, limit = 5 } = queryParams;
+    const skip = (page - 1) * limit;
+    const users = await User.find({}).select('username name customId role status').sort({ createdAt: -1 }).skip(skip).limit(limit);
+    return users;
   }
 }
 

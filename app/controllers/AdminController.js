@@ -184,6 +184,121 @@ exports.updateUserRole = async (req, res, next) => {
   }
 };
 
+// 家长管理
+exports.getAllParents = async (req, res, next) => {
+  try {
+    // 从请求中获取查询参数
+    const result = await AdminService.getAllParents(req.query);
+
+    // 返回成功响应
+    res.status(200).json({
+      status: 'success',
+      data: result.parents,
+      pagination: result.pagination
+    });
+  } catch (error) {
+    // 错误处理
+    console.error(`[管理员] 获取家长列表失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
+exports.getAllParentsLimit = async (req, res, next) => {
+  try {
+    // 从请求中获取分页参数和过滤条件
+    const { page = 1, limit = 10 } = req.query;
+    
+    // 提取过滤条件
+    const filters = {
+      status: req.query.status,
+      city: req.query.city,
+      district: req.query.district,
+      search: req.query.search,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder
+    };
+
+    // 调用 AdminService 的方法获取分页数据
+    const result = await AdminService.getParentsByLimit(page, limit, filters);
+
+    // 返回成功响应
+    res.status(200).json({
+      status: 'success',
+      data: result.parents,
+      pagination: result.pagination
+    });
+  } catch (error) {
+    // 错误处理
+    console.error(`[管理员] 分页获取家长列表失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
+exports.getParentById = async (req, res, next) => {
+  try {
+    const { parentId } = req.params;
+    const parent = await AdminService.getParentById(parentId);
+
+    res.status(200).json({
+      status: 'success',
+      data: parent
+    });
+  } catch (error) {
+    console.error(`[管理员] 获取家长 ${req.params.parentId} 详情失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
+exports.getParentsByCity = async (req, res, next) => {
+  try {
+    const { cityName } = req.params;
+    const parents = await AdminService.getParentsByCity(cityName);
+
+    res.status(200).json({
+      status: 'success',
+      data: parents
+    });
+  } catch (error) {
+    console.error(`[管理员] 获取${req.params.cityName}家长列表失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
+exports.updateParentStatus = async (req, res, next) => {
+  try {
+    const { parentId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      throw new AppError('缺少状态信息', 400);
+    }
+
+    const parent = await AdminService.updateParentStatus(parentId, status);
+
+    res.status(200).json({
+      status: 'success',
+      data: parent
+    });
+  } catch (error) {
+    console.error(`[管理员] 更新家长 ${req.params.parentId} 状态失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
+exports.getParentStatistics = async (req, res, next) => {
+  try {
+    const statistics = await AdminService.getParentStatistics();
+
+    res.status(200).json({
+      status: 'success',
+      data: statistics
+    });
+  } catch (error) {
+    console.error(`[管理员] 获取家长统计数据失败: ${error.message}`, error);
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
 // 教师管理
 exports.getAllTutors = async (req, res, next) => {
   try {
@@ -298,7 +413,14 @@ exports.updateTutorStatus = async (req, res, next) => {
 // 内容审核
 exports.getAllPosts = async (req, res, next) => {
   try {
-    const { status, search, sort = 'createdAt' } = req.query;
+    // 从请求中获取分页参数和过滤条件
+    const { page = 1, limit = 10, status, search, sort = 'createdAt', sortOrder = 'desc' } = req.query;
+    
+    // 确保 page 和 limit 是数字
+    const parsedPage = parseInt(page) || 1;
+    const parsedLimit = parseInt(limit) || 10;
+    
+    console.log(`[ADMIN] 分页获取帖子列表: page=${parsedPage}, limit=${parsedLimit}`);
     
     // 构建查询条件
     const query = {};
@@ -315,33 +437,54 @@ exports.getAllPosts = async (req, res, next) => {
     let sortOption = {};
     switch (sort) {
       case 'createdAt':
-        sortOption = { createdAt: -1 };
+        sortOption = { createdAt: sortOrder === 'asc' ? 1 : -1 };
         break;
       case 'grade':
-        sortOption = { grade: 1 };
+        sortOption = { grade: sortOrder === 'asc' ? 1 : -1 };
         break;
       case 'status':
-        sortOption = { status: 1 };
+        sortOption = { status: sortOrder === 'asc' ? 1 : -1 };
         break;
       default:
         sortOption = { createdAt: -1 };
     }
 
-    // 执行查询 - 获取所有帖子，不使用分页
-    const posts = await TutoringRequest.find(query)
-      .sort(sortOption)
-      .select('requestId status grade subjects location preferences parentId createdAt reviewedAt');
+    // 计算跳过的数量
+    const skip = (parsedPage - 1) * parsedLimit;
+    
+    console.log(`[ADMIN] 查询条件: ${JSON.stringify(query)}, 跳过: ${skip}, 限制: ${parsedLimit}`);
+    
+    // 并行执行查询，获取帖子数据和总数
+    const [posts, total] = await Promise.all([
+      TutoringRequest.find(query)
+        .sort(sortOption)
+        .skip(skip)
+        .limit(parsedLimit)
+        .select('requestId status grade subjects location preferences parentId createdAt reviewedAt'),
+      TutoringRequest.countDocuments(query)
+    ]);
+    
+    console.log(`[ADMIN] 查询结果: 总数=${total}, 返回条数=${posts.length}`);
 
-    const total = await TutoringRequest.countDocuments(query);
 
+    // 构造分页信息
+    const pagination = {
+      page: parsedPage,
+      limit: parsedLimit,
+      total,
+      pages: Math.ceil(total / parsedLimit)
+    };
+
+    // 返回成功响应
     res.status(200).json({
       status: 'success',
       data: {
-        posts,
-        total
+        posts
       },
+      pagination
     });
   } catch (error) {
+    console.error(`[ADMIN] 分页获取帖子列表失败: ${error.message}`, error);
     next(new AppError('获取帖子列表失败', 500));
   }
 };
@@ -677,6 +820,19 @@ exports.getTutorsByCity = async (req, res, next) => {
   try {
     const { cityName } = req.params;
     const result = await AdminService.getTutorsByCity(cityName, req.query);
+    
+    res.status(200).json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(new AppError(error.message, error.statusCode || 500));
+  }
+};
+
+exports.getRecentUsers = async (req, res, next) => {
+  try {
+    const result = await AdminService.getRecentUsers(req.query);
     
     res.status(200).json({
       status: 'success',

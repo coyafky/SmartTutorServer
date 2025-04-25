@@ -1218,17 +1218,30 @@ class TutorProfileService {
         throw new AppError('教师资料卡不存在', 404);
       }
 
-      // 获取教师所在城市
-      const city = tutorProfile.location.city;
-      if (!city) {
-        throw new AppError('教师没有设置城市信息', 400);
+      // 优先使用请求中指定的城市，如果没有才使用教师所在城市
+      let city;
+      if (filters.city) {
+        city = filters.city;
+        log.info(`使用用户指定的城市: ${city}`);
+      } else {
+        // 获取教师所在城市
+        city = tutorProfile.location.city;
+        if (!city) {
+          throw new AppError('教师没有设置城市信息', 400);
+        }
+        log.info(`使用教师所在城市: ${city}`);
       }
 
       // 构建查询条件
       const query = {
         'location.city': city,
-        status: { $in: ['open', 'published'] }, // 修改这里，使用 $in 操作符
+        status: { $in: ['open', 'published'] }, // 只获取开放和已发布的帖子
       };
+
+      // 添加区域筛选
+      if (filters.district) {
+        query['location.district'] = filters.district;
+      }
 
       // 添加科目筛选
       if (filters.subject) {
@@ -1237,7 +1250,24 @@ class TutorProfileService {
 
       // 添加年级筛选
       if (filters.grade) {
-        query['grade'] = filters.grade;
+        query['grade'] = { $regex: filters.grade, $options: 'i' }; // 使用正则表达式支持部分匹配
+      }
+
+      // 添加教学地点筛选
+      if (filters.teachingLocation) {
+        query['preferences.teachingLocation'] = filters.teachingLocation;
+      }
+
+      // 添加教师性别要求筛选
+      if (filters.teacherGender) {
+        query['preferences.teacherGender'] = filters.teacherGender;
+      }
+
+      // 添加教学风格筛选
+      if (filters.teachingStyle && Array.isArray(filters.teachingStyle)) {
+        query['preferences.teachingStyle'] = { $in: filters.teachingStyle };
+      } else if (filters.teachingStyle) {
+        query['preferences.teachingStyle'] = filters.teachingStyle;
       }
 
       // 添加教育水平筛选
@@ -1246,9 +1276,12 @@ class TutorProfileService {
       }
 
       // 添加价格区间筛选
-      if (filters.minPrice !== undefined && filters.maxPrice !== undefined) {
-        query['preferences.priceRange.min'] = { $lte: filters.maxPrice };
-        query['preferences.priceRange.max'] = { $gte: filters.minPrice };
+      if (filters.minPrice !== undefined) {
+        query['preferences.budget.min'] = { $gte: filters.minPrice };
+      }
+      
+      if (filters.maxPrice !== undefined) {
+        query['preferences.budget.max'] = { $lte: filters.maxPrice };
       }
 
       // 添加开课时间筛选
@@ -1260,9 +1293,33 @@ class TutorProfileService {
           query['preferences.schedule.periods'] = filters.session.period;
         }
       }
+      
+      // 添加关键词搜索功能
+      if (filters.search && filters.search.trim() !== '') {
+        const searchQuery = filters.search.trim();
+        const searchRegex = new RegExp(searchQuery, 'i');
+        
+        // 使用 $or 在多个字段中搜索
+        const searchCondition = {
+          $or: [
+            { studentPreference: searchRegex },   // 学生偏好
+            { parentDescription: searchRegex },   // 家长描述
+            { 'subjects.name': searchRegex },     // 科目名称
+            { 'subjects.difficulty': searchRegex },// 科目难度
+            { grade: searchRegex },               // 年级
+            { 'location.address': searchRegex },  // 地址
+            { 'location.district': searchRegex }, // 区域
+          ]
+        };
+        
+        // 将搜索条件与其他条件结合
+        Object.assign(query, searchCondition);
+      }
 
-      // 设置排序参数（保留排序功能）
+      // 设置排序参数
       const {
+        page = 1,
+        limit = 10,
         sortBy = 'createdAt',
         sortOrder = -1,
       } = options;
@@ -1270,25 +1327,33 @@ class TutorProfileService {
       const sort = {};
       sort[sortBy] = sortOrder;
 
-      // 执行查询 - 移除 skip 和 limit，返回所有结果
-      const requests = await TutoringRequest.find(query)
-        .sort(sort);
+      // 计算跳过数量
+      const skip = (page - 1) * limit;
 
-      // 统计总数
-      const total = requests.length;
+      // 执行查询并应用分页
+      const [requests, total] = await Promise.all([
+        TutoringRequest.find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit),
+        TutoringRequest.countDocuments(query)
+      ]);
+
+      // 计算总页数
+      const pages = Math.ceil(total / limit);
 
       log.info(
-        `成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length} 条`
+        `成功获取教师 ${tutorId} 所在城市(${city})的家教需求帖子: ${requests.length}/${total} 条`
       );
 
-      // 返回所有结果，但保持响应格式一致
+      // 返回结果和正确的分页信息
       return {
         requests,
         pagination: {
           total,
-          page: 1,
-          limit: total,
-          pages: 1,
+          page,
+          limit,
+          pages,
         },
       };
     } catch (error) {
@@ -1296,6 +1361,140 @@ class TutorProfileService {
         `根据条件获取教师所在城市的家教需求帖子失败: ${error.message}`,
         error
       );
+      throw error;
+    }
+  }
+
+  /**
+   * 获取指定城市的家教需求帖子
+   * @param {string} cityName - 城市名称
+   * @param {Object} filters - 筛选条件
+   * @param {Object} options - 分页和排序选项
+   * @param {Array} statusFilter - 帖子状态过滤数组
+   * @returns {Promise<Object>} - 帖子列表和分页信息
+   */
+  static async getRequestsByCity(
+    cityName,
+    filters = {},
+    options = {},
+    statusFilter = ['published']
+  ) {
+    try {
+      log.info(`获取${cityName}的家教需求帖子，条件:`, { filters, options });
+      
+      // 构建基本查询条件
+      const query = {
+        'location.city': cityName,
+        status: { $in: statusFilter }, // 只获取指定状态的帖子
+      };
+      
+      // 与我们之前实现的筛选逻辑相同，添加各种筛选条件
+      if (filters.district) {
+        query['location.district'] = filters.district;
+      }
+
+      if (filters.subject) {
+        query['subjects.name'] = filters.subject;
+      }
+
+      if (filters.grade) {
+        query['grade'] = { $regex: filters.grade, $options: 'i' };
+      }
+      
+      if (filters.search && filters.search.trim() !== '') {
+        const searchQuery = filters.search.trim();
+        const searchRegex = new RegExp(searchQuery, 'i');
+        
+        // 使用 $or 在多个字段中搜索
+        const searchCondition = {
+          $or: [
+            { grade: searchRegex },               // 年级
+            { 'subjects.name': searchRegex },     // 科目名称
+            { 'location.district': searchRegex }, // 区域
+            { 'location.address': searchRegex },  // 地址
+          ]
+        };
+        
+        // 将搜索条件与其他条件结合
+        Object.assign(query, searchCondition);
+      }
+
+      // 设置排序参数
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = 'createdAt',
+        sortOrder = -1,
+      } = options;
+
+      const sort = {};
+      sort[sortBy] = sortOrder;
+
+      // 计算跳过数量
+      const skip = (page - 1) * limit;
+
+      // 执行查询并应用分页
+      const [requests, total] = await Promise.all([
+        TutoringRequest.find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit),
+        TutoringRequest.countDocuments(query)
+      ]);
+
+      // 计算总页数
+      const pages = Math.ceil(total / limit);
+
+      log.info(`成功获取${cityName}的家教需求帖子: ${requests.length}/${total} 条`);
+
+      // 返回结果和分页信息
+      return {
+        requests,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages,
+        },
+      };
+    } catch (error) {
+      log.error(`获取${cityName}的家教需求帖子失败: ${error.message}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取单个家教需求帖子
+   * @param {string} requestId - 帖子ID（可能是requestId或MongoDB的_id）
+   * @returns {Promise<Object>} - 帖子详情
+   */
+  static async getTutoringRequestById(requestId) {
+    try {
+      log.info(`获取家教需求帖子详情，帖子ID: ${requestId}`);
+      
+      // 构建查询条件，兼容两种ID形式
+      let query = {};
+      
+      // 检查是否是MongoDB的ObjectId格式
+      if (requestId.match(/^[0-9a-fA-F]{24}$/)) {
+        query = { _id: requestId };
+      } else {
+        // 否则当作自定义requestId处理
+        query = { requestId };
+      }
+      
+      // 查询帖子
+      const request = await TutoringRequest.findOne(query);
+      
+      if (!request) {
+        throw new AppError('帖子不存在', 404);
+      }
+      
+      log.info(`成功获取帖子详情, ID: ${requestId}`);
+      
+      return request;
+    } catch (error) {
+      log.error(`获取帖子详情失败: ${error.message}`, error);
       throw error;
     }
   }

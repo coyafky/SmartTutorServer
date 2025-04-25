@@ -24,6 +24,14 @@ router.get('/tutors/:tutorId', AdminController.getTutorById);
 router.patch('/tutors/:tutorId/verify', AdminController.verifyTutor);
 router.patch('/tutors/:tutorId/status', AdminController.updateTutorStatus);
 
+// 家长管理
+router.get('/parents', AdminController.getAllParents);
+router.get('/parents/limit', AdminController.getAllParentsLimit);
+router.get('/parents/city/:cityName', AdminController.getParentsByCity);
+router.get('/parents/:parentId', AdminController.getParentById);
+router.get('/parents/statistics', AdminController.getParentStatistics);
+router.patch('/parents/:parentId/status', AdminController.updateParentStatus);
+
 // 内容审核
 router.get('/posts', AdminController.getAllPosts);
 router.get('/posts/city/:cityName', AdminController.getPostsByCity);
@@ -41,5 +49,5 @@ router.get('/statistics/users', AdminController.getUserStatistics);
 router.get('/statistics/tutors', AdminController.getTutorStatistics);
 router.get('/statistics/posts', AdminController.getPostStatistics);
 router.get('/statistics/matches', AdminController.getMatchStatistics);
-
+router.get('/statistics/recentUsers', AdminController.getRecentUsers);
 module.exports = router;

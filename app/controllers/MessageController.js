@@ -30,7 +30,11 @@ exports.getConversations = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -63,7 +67,11 @@ exports.getOrCreateConversation = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -91,7 +99,11 @@ exports.getMessages = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -137,7 +149,11 @@ exports.sendMessage = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -177,7 +193,11 @@ exports.markAsRead = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -203,7 +223,11 @@ exports.getUnreadCount = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -236,7 +260,11 @@ exports.deleteMessage = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -263,7 +291,11 @@ exports.archiveConversation = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -290,7 +322,11 @@ exports.restoreConversation = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -343,7 +379,11 @@ exports.sendLessonRequest = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -396,7 +436,11 @@ exports.sendLessonConfirmation = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -450,7 +494,11 @@ exports.sendLessonReschedule = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -503,7 +551,11 @@ exports.sendLessonCancellation = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -556,7 +608,11 @@ exports.sendHomeworkAssignment = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -610,7 +666,11 @@ exports.sendHomeworkSubmission = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };
 
@@ -663,6 +723,10 @@ exports.sendProgressReport = async (req, res) => {
       });
     }
   } catch (error) {
-    return errorHandler(res, error);
+    // 创建AppError对象并发送响应
+    return res.status(500).json({
+      success: false,
+      message: error.message || '获取对话失败'
+    });
   }
 };

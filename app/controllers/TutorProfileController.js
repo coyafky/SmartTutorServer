@@ -726,25 +726,50 @@ class TutorProfileController {
   static async getCityTutoringRequestsWithFilters(req, res, next) {
     try {
       const { user } = req;
-      const filters = _.pick(req.query, [
+      
+      // 兼容 GET 和 POST 请求
+      const filterData = req.method === 'POST' ? req.body : req.query;
+      
+      // 扩展筛选字段，增加区域和搜索功能
+      const filters = _.pick(filterData, [
         'subject',
         'grade',
         'educationLevel',
         'minPrice',
         'maxPrice',
+        'district',        // 添加区域筛选
+        'teachingLocation', // 教学地点
+        'teacherGender',    // 教师性别要求
+        'teachingStyle',    // 教学风格
         'session.day',
         'session.period',
+        'search',           // 搜索关键词
+        'city'              // 允许指定城市
       ]);
+
+      // 日志记录请求参数
+      log.info(`教师${user.customId}获取筛选帖子，筛选条件:`, filters);
+      
       const options = {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 10,
-        sortBy: req.query.sortBy || 'createdAt',
-        sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
+        page: parseInt(filterData.page) || 1,
+        limit: parseInt(filterData.limit) || 10,
+        sortBy: filterData.sortBy || 'createdAt',
+        sortOrder: filterData.sortOrder === 'asc' ? 1 : -1,
       };
 
-      // 转换价格参数为数字类型
+      // 转换数字参数
       if (filters.minPrice) filters.minPrice = Number(filters.minPrice);
       if (filters.maxPrice) filters.maxPrice = Number(filters.maxPrice);
+      
+      // 因为store端传来的可能是数组字符串，需要正确处理
+      if (filters.teachingStyle && typeof filters.teachingStyle === 'string') {
+        try {
+          filters.teachingStyle = JSON.parse(filters.teachingStyle);
+        } catch (e) {
+          // 如果不是JSON格式，则作为单个元素数组处理
+          filters.teachingStyle = [filters.teachingStyle];
+        }
+      }
 
       const result =
         await TutorProfileService.getCityTutoringRequestsWithFilters(
@@ -761,6 +786,7 @@ class TutorProfileController {
         },
       });
     } catch (error) {
+      log.error(`获取筛选帖子错误: ${error.message}`, error);
       next(error);
     }
   }
@@ -786,6 +812,91 @@ class TutorProfileController {
       next(error);
     }
   }
+  /**
+   * 获取指定城市的家教需求帖子
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   * @param {Function} next - 下一个中间件
+   */
+  static async getRequestsByCity(req, res, next) {
+    try {
+      const { user } = req;
+      const { cityName } = req.params;
+      
+      if (!cityName) {
+        throw new AppError('城市名称不能为空', 400);
+      }
+      
+      const options = {
+        page: parseInt(req.query.page) || 1,
+        limit: parseInt(req.query.limit) || 10,
+        sortBy: req.query.sortBy || 'createdAt',
+        sortOrder: req.query.sortOrder === 'asc' ? 1 : -1,
+      };
+      
+      // 查询参数
+      const filters = _.pick(req.query, [
+        'subject',
+        'grade',
+        'district',
+        'status',
+        'search'
+      ]);
+      
+      log.info(`教师 ${user.customId} 获取 ${cityName} 城市的帖子`);
+      
+      // 只查询已发布的帖子
+      const result = await TutorProfileService.getRequestsByCity(
+        cityName,
+        filters,
+        options,
+        ['published', 'open']
+      );
+      
+      res.status(200).json({
+        status: 'success',
+        data: {
+          requests: result.requests,
+          pagination: result.pagination
+        }
+      });
+    } catch (error) {
+      log.error(`获取城市帖子错误: ${error.message}`, error);
+      next(error);
+    }
+  }
+  
+  /**
+   * 获取指定帖子详情
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   * @param {Function} next - 下一个中间件
+   */
+  static async getTutoringRequestById(req, res, next) {
+    try {
+      const { requestId } = req.params;
+      
+      if (!requestId) {
+        throw new AppError('帖子ID不能为空', 400);
+      }
+      
+      log.info(`查询帖子详情, ID: ${requestId}`);
+      
+      // 调用服务层方法获取帖子
+      const request = await TutorProfileService.getTutoringRequestById(requestId);
+      
+      // 返回结果
+      res.status(200).json({
+        status: 'success',
+        data: { request }
+      });
+    } catch (error) {
+      log.error(`获取帖子详情错误: ${error.message}`, error);
+      next(error);
+    }
+  }
 }
+
+  
 
 module.exports = TutorProfileController;
