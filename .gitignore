@@ -56,3 +56,4 @@ build/
 # PM2 配置和日志
 ecosystem.config.js
 .pm2/
+.vercel

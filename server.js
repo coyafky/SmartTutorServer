@@ -138,7 +138,14 @@ process.on('uncaughtException', (err) => {
 });
 
 /**
- * 导出 app 和 server 实例
- * 便于测试和其他模块引用
+ * 导出方式
+ * 同时兼容Vercel Serverless环境和常规Node.js环境
  */
-module.exports = { app, server };
+
+// 判断是否在Vercel环境中
+// 为Vercel提供导出一个Express应用实例
+module.exports = app;
+
+// 同时允许在常规环境中访问app和server
+module.exports.app = app;
+module.exports.server = server;
