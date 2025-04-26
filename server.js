@@ -75,13 +75,24 @@ const allowedOrigins = [
   'https://smart-tutor-tutor-page.vercel.app'
 ];
 
-// 然后使用cors包做额外的设置
+// 然后使用cors包做更精细的设置
 app.use(
   cors({
-    origin: '*', // 简化配置，允许所有来源
+    origin: function(origin, callback) {
+      // 允许没有来源(如API工具请求)或允许的来源
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        // 开发模式下允许所有来源，生产环境可以限制
+        console.log('未在允许列表中的来源：', origin);
+        callback(null, true); // 暂时允许所有来源以便于开发
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   })
 );
 
