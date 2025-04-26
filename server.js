@@ -65,14 +65,13 @@ const allowedOrigins = [
   'http://localhost:5173',  // AdminPage
   'http://localhost:5174',  // ParentPage
   'http://localhost:5175',  // TutorPage
+  'http://localhost:5176',  // 其他可能的本地端口
   // Vercel部署的前端
   'https://smart-tutor-admin.vercel.app',
   'https://smart-tutor-parent.vercel.app',
   'https://smart-tutor-tutor.vercel.app',
-  // 其他Vercel自动生成的域名
-  'https://smart-tutor-admin-page.vercel.app',
-  'https://smart-tutor-parent-page.vercel.app',
-  'https://smart-tutor-tutor-page.vercel.app'
+  'https://smart-tutor-admin-five.vercel.app', // 新部署的AdminPage  // 其他Vercel自动生成的域名
+
 ];
 
 // 然后使用cors包做更精细的设置
