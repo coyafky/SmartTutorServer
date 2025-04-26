@@ -19,9 +19,16 @@ class SocketService {
    * @param {Object} server - HTTP服务器实例
    */
   initialize(server) {
+    // 提供默认值防止环境变量未定义
+    const corsOrigins = process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',') 
+      : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 
+         'https://smart-tutor-admin.vercel.app', 'https://smart-tutor-parent.vercel.app', 
+         'https://smart-tutor-tutor.vercel.app'];
+      
     this.io = socketIO(server, {
       cors: {
-        origin: process.env.CORS_ORIGIN.split(','),
+        origin: corsOrigins,
         methods: ['GET', 'POST'],
         credentials: true
       }
