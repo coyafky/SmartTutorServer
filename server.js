@@ -40,21 +40,51 @@ connectDB();
 /**
  * 中间件配置
  */
-// 配置跨域资源共享 (CORS)，允许所有来源访问
+/**
+ * 跨域资源共享 (CORS) 配置
+ * 强制允许跨域请求，特别针对Vercel部署环境
+ */
+// 先使用中间件直接设置头部，确保优先级
+app.use((req, res, next) => {
+  // 设置允许所有来源访问
+  res.header('Access-Control-Allow-Origin', '*');
+  // 允许的请求头
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  // 允许的HTTP方法
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS ,PATCH');
+  // 针对OPTIONS请求的处理(预检请求)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
+// 所有允许的源列表(为了记录目的保留)
+const allowedOrigins = [
+  // 本地开发环境
+  'http://localhost:5173',  // AdminPage
+  'http://localhost:5174',  // ParentPage
+  'http://localhost:5175',  // TutorPage
+  // Vercel部署的前端
+  'https://smart-tutor-admin.vercel.app',
+  'https://smart-tutor-parent.vercel.app',
+  'https://smart-tutor-tutor.vercel.app',
+  // 其他Vercel自动生成的域名
+  'https://smart-tutor-admin-page.vercel.app',
+  'https://smart-tutor-parent-page.vercel.app',
+  'https://smart-tutor-tutor-page.vercel.app'
+];
+
+// 然后使用cors包做额外的设置
 app.use(
   cors({
-    origin: '*', // 允许任何来源
-    credentials: false // 当使用 origin: '*' 时，credentials 必须为 false
+    origin: '*', // 简化配置，允许所有来源
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
   })
 );
 
-// 注意: 如果在生产环境需要携带凭证（cookies），请使用以下方式：
-// app.use(
-//   cors({
-//     origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5173'],
-//     credentials: true
-//   })
-// );
 
 // 服务器端口配置，优先使用环境变量中的端口，默认为3000
 const PORT = process.env.PORT || 3000;
@@ -67,6 +97,47 @@ app.use(express.urlencoded({ extended: true }));
 
 // 开发环境下的 HTTP 请求日志
 app.use(morgan('dev'));
+
+/**
+ * 根路由处理
+ * 提供服务器状态和API信息
+ */
+app.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'SmartTutor API 服务器运行正常',
+    apiDocs: '/api-status',
+    version: '1.0.0'
+  });
+});
+
+/**
+ * API状态路由
+ * 提供所有可用API的列表
+ */
+app.get('/api-status', (req, res) => {
+  res.json({
+    status: 'success',
+    message: 'SmartTutor API 服务器运行正常',
+    apis: [
+      { path: '/api/auth', description: '认证系统 API' },
+      { path: '/api/users', description: '用户管理 API' },
+      { path: '/api/tutorProfiles', description: '教师资料 API' }, 
+      { path: '/api/admin', description: '管理员 API' },
+      { path: '/api/parentProfiles', description: '家长资料 API' },
+      { path: '/api/recommendations', description: '推荐功能 API' },
+      { path: '/api/geolocation', description: '地理位置 API' },
+      { path: '/api/messages', description: '消息交流 API' },
+      { path: '/api/ratings', description: '评价 API' }, 
+      { path: '/api/lessons', description: '课程管理 API' },
+      { path: '/api/notifications', description: '通知 API' }
+    ],
+    environmentStatus: {
+      nodeEnv: process.env.NODE_ENV || '未设置',
+      mongoConnection: mongoose.connection.readyState === 1 ? '已连接' : '未连接'
+    }
+  });
+});
 
 /**
  * API 路由注册
